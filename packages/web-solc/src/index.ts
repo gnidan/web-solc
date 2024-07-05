@@ -1,7 +1,7 @@
 import semver from "semver";
 
-import type { CompilerInput, CompilerOutput } from "./types";
-import solcWorker from "./solc.worker";
+import type { CompilerInput, CompilerOutput } from "./types.js";
+import solcWorker from "./solc.worker.js";
 
 export interface RepositoryOptions {
   baseUrl?: string;
