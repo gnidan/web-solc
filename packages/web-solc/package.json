@@ -1,0 +1,22 @@
+{
+  "name": "web-solc",
+  "version": "0.1.0",
+  "description": "Browser compatible wrapper around solc in a web worker",
+  "type": "module",
+  "main": "dist/src/index.js",
+  "types": "./dist/src/index.d.ts",
+  "author": "g. nicholas d'andrea <nick@gnidan.org>",
+  "license": "MIT",
+  "scripts": {
+    "prepare": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.9",
+    "@types/semver": "^7.5.8",
+    "solc": "^0.8.26",
+    "typescript": "^5.5.3"
+  },
+  "dependencies": {
+    "semver": "^7.6.2"
+  }
+}

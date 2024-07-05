@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+
+# Run the commands with concurrently
+concurrently --names=web-solc,example\
+  "cd ./packages/web-solc && yarn prepare --watch" \
+  "cd ./packages/example && yarn dev"
