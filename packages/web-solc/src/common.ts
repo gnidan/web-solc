@@ -1,8 +1,5 @@
 import semver from "semver";
 
-import type { CompilerInput, CompilerOutput } from "./types.js";
-import solcWorker from "./solc.worker.js";
-
 export interface RepositoryOptions {
   baseUrl?: string;
 }
@@ -14,10 +11,13 @@ export interface WebSolc {
   stopWorker(): void;
 }
 
-export default async function webSolc(
+export type CompilerInput = any;
+export type CompilerOutput = any;
+
+export async function fetchLatestReleasedSoljsonSatisfyingVersionRange(
   versionRange: string,
   options?: RepositoryOptions
-): Promise<WebSolc> {
+): Promise<string> {
   const { builds } = await fetchBinList(options);
   const compatibleBuilds = builds
     .filter(({ longVersion }) => semver.satisfies(longVersion, versionRange));
@@ -32,27 +32,7 @@ export default async function webSolc(
 
   const soljsonText = await fetchSoljson(latestCompatibleBuild.path, options);
 
-  const { worker, stopWorker } = startWorker();
-
-  return {
-    compile(input) {
-      return new Promise((accept, reject) => {
-        worker.onmessage = (event) => {
-          try {
-            accept(event.data);
-          } catch (error) {
-            reject(error);
-          }
-        };
-
-        worker.onerror = reject;
-
-        worker.postMessage({ soljsonText, input });
-      });
-    },
-
-    stopWorker
-  }
+  return soljsonText;
 }
 
 interface BinList {
@@ -73,31 +53,9 @@ async function fetchBinList({
 
 async function fetchSoljson(
   path: string,
-  {
-    baseUrl = defaultBaseUrl
-  }: RepositoryOptions = {}
+  { baseUrl = defaultBaseUrl }: RepositoryOptions = {}
 ): Promise<string> {
   const response = await fetch(`${baseUrl}/${path}`);
 
   return response.text();
-}
-
-function startWorker(): {
-  worker: Worker;
-  stopWorker: () => void;
-} {
-  const workerBlob = new Blob(
-    [`(${solcWorker.toString()})()`],
-    { type: "application/javascript" }
-  );
-  const workerUrl = URL.createObjectURL(workerBlob);
-  const worker = new Worker(workerUrl);
-
-  return {
-    worker,
-    stopWorker: () => {
-      worker.terminate();
-      URL.revokeObjectURL(workerUrl);
-    }
-  };
 }

@@ -1,4 +1,4 @@
-import type { CompilerInput, CompilerOutput } from "./types";
+import type { CompilerInput, CompilerOutput } from "./common.js";
 
 export interface WorkerSolc {
   compile(input: CompilerInput): CompilerOutput;
@@ -20,25 +20,19 @@ export default function solcWorker() {
   }
 
   async function loadSolc(soljsonText: string): Promise<WorkerSolc> {
-    return await new Promise((accept, reject) => {
-      try {
-        const Module = { exports: {} };
+    const Module = { exports: {} };
 
-        const soljsonFunction = new Function("Module", soljsonText);
-        soljsonFunction(Module);
+    const soljsonFunction = new Function("Module", soljsonText);
+    soljsonFunction(Module);
 
-        const compile = (Module as any).cwrap(
-          "solidity_compile",
-          "string",
-          ["string", "number"]
-        );
+    const compile = (Module as any).cwrap(
+      "solidity_compile",
+      "string",
+      ["string", "number"]
+    );
 
-        const solc = { compile };
+    const solc = { compile };
 
-        accept(solc);
-      } catch (error) {
-        reject(error);
-      }
-    });
+    return solc;
   }
 };

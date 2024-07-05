@@ -3,8 +3,9 @@
   "version": "0.1.0",
   "description": "Browser compatible wrapper around solc in a web worker",
   "type": "module",
-  "main": "dist/src/index.js",
-  "types": "./dist/src/index.d.ts",
+  "main": "dist/src/node.js",
+  "browser": "dist/src/browser.js",
+  "types": "./dist/src/browser.d.ts",
   "author": "g. nicholas d'andrea <nick@gnidan.org>",
   "license": "MIT",
   "scripts": {
