@@ -1,7 +1,7 @@
 import type { CompilerInput, CompilerOutput } from "./common.js";
 
 export interface WorkerSolc {
-  compile(input: CompilerInput): CompilerOutput;
+  compile(input: string): string;
 }
 
 export default function solcWorker() {

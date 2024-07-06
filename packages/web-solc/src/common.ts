@@ -11,8 +11,8 @@ export interface WebSolc {
   stopWorker(): void;
 }
 
-export type CompilerInput = any;
-export type CompilerOutput = any;
+export type CompilerInput = object;
+export type CompilerOutput = object;
 
 export async function fetchLatestReleasedSoljsonSatisfyingVersionRange(
   versionRange: string,

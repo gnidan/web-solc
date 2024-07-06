@@ -12,6 +12,7 @@ const result = await solc.compile({
     }
   },
   settings: {
+    viaIR: true,
     outputSelection: {
       "*": {
         "*": ["*"]

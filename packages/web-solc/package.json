@@ -14,7 +14,6 @@
   "devDependencies": {
     "@types/node": "^20.14.9",
     "@types/semver": "^7.5.8",
-    "solc": "^0.8.26",
     "typescript": "^5.5.3"
   },
   "dependencies": {
