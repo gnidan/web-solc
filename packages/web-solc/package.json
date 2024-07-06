@@ -8,6 +8,11 @@
   "types": "./dist/src/browser.d.ts",
   "author": "g. nicholas d'andrea <nick@gnidan.org>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gnidan/web-solc.git",
+    "directory": "packages/web-solc"
+  },
   "scripts": {
     "prepare": "tsc"
   },
