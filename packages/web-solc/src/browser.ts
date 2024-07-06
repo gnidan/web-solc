@@ -7,7 +7,7 @@ import {
 
 import solcWorker from "./solc.worker.js";
 
-export default async function webSolc(
+export async function fetchSolc(
   versionRange: string,
   options?: RepositoryOptions
 ): Promise<WebSolc> {

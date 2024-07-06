@@ -1,6 +1,6 @@
-const { default: webSolc } = await import("web-solc");
+const { fetchSolc } = await import("web-solc");
 
-const solc = await webSolc("^0.8.25");
+const solc = await fetchSolc("^0.8.25");
 
 console.log("solc %o", solc);
 

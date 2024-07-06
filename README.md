@@ -12,13 +12,13 @@ This assumes use of some kind of bundler like Vite or Next.js.
 npm install --save web-solc
 ```
 
-
 ## Usage
 
 ```typescript
-import webSolc from "web-solc";
+// or via `const { fetchSolc } = await import("web-solc");`
+import { fetchSolc } from "web-solc";
 
-const solc = await webSolc("^0.8.25");
+const solc = await fetchSolc("^0.8.25");
 
 // note that this handles JSON stringifying/parsing automatically, instead of
 // how solc-js accepts/returns JSON strings.

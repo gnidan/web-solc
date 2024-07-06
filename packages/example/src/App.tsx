@@ -1,16 +1,14 @@
 import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
 import "./App.css";
 
-import webSolc from "web-solc";
+import { fetchSolc } from "web-solc";
 
 export default function App() {
   const [output, setOutput] = useState("");
 
   const compile = async () => {
     try {
-      const solc = await webSolc("^0.8.0");
+      const solc = await fetchSolc("^0.8.0");
       const result = await solc.compile({
         language: "Solidity",
         sources: {
