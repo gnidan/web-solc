@@ -1,10 +1,8 @@
 const { fetchSolc } = await import("web-solc");
 
-const solc = await fetchSolc("^0.8.25");
+const { compile, stopWorker } = await fetchSolc("^0.8.25");
 
-console.log("solc %o", solc);
-
-const result = await solc.compile({
+const result = await compile({
   language: "Solidity",
   sources: {
     "test.sol": {
@@ -22,3 +20,5 @@ const result = await solc.compile({
 });
 
 console.log("result %o", result);
+
+stopWorker();
