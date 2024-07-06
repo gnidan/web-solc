@@ -34,7 +34,7 @@ const {
 
 // note that this handles JSON stringifying/parsing automatically, instead of
 // how solc-js accepts/returns JSON strings.
-const { contracts } = await solc.compile({
+const { contracts } = await compile({
   language: "Solidity",
   sources: {
     "test.sol": {
