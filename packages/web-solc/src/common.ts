@@ -12,7 +12,11 @@ export interface WebSolc {
 }
 
 export type CompilerInput = object;
-export type CompilerOutput = any;
+export interface CompilerOutput {
+  errors?: any[];
+  sources: any[];
+  contracts: any[];
+}
 
 export async function fetchLatestReleasedSoljsonSatisfyingVersionRange(
   versionRange: string,
