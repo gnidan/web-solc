@@ -1,4 +1,4 @@
-import type { CompilerInput, CompilerOutput } from "./common.js";
+import type { CompilerInput, CompilerOutput } from "./interface.js";
 
 export interface WorkerSolc {
   compile(input: string): string;

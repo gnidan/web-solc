@@ -1,11 +1,9 @@
-import {
-  defaultBaseUrl,
-  fetchLatestReleasedSoljsonSatisfyingVersionRange,
-  type RepositoryOptions,
-  type WebSolc
-} from "./common.js";
+import { fetchLatestReleasedSoljsonSatisfyingVersionRange } from "./common.js";
 
+import type { RepositoryOptions, WebSolc } from "./interface.js";
 import solcWorker from "./solc.worker.js";
+
+export * from "./interface.js";
 
 export async function fetchSolc(
   versionRange: string,

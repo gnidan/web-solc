@@ -1,13 +1,10 @@
 import * as path from "path";
 
-import {
-  defaultBaseUrl,
-  fetchLatestReleasedSoljsonSatisfyingVersionRange,
-  type RepositoryOptions,
-  type WebSolc
-} from "./common.js";
-
+import type { RepositoryOptions, WebSolc } from "./interface.js";
 import type { WorkerSolc } from "./solc.worker.js";
+import { fetchLatestReleasedSoljsonSatisfyingVersionRange } from "./common.js";
+
+export * from "./interface.js";
 
 export async function fetchSolc(
   versionRange: string,
