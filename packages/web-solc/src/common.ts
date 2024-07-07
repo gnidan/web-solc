@@ -12,7 +12,7 @@ export interface WebSolc {
 }
 
 export type CompilerInput = object;
-export type CompilerOutput = object;
+export type CompilerOutput = any;
 
 export async function fetchLatestReleasedSoljsonSatisfyingVersionRange(
   versionRange: string,
