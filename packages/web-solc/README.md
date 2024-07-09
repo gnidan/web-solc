@@ -1,6 +1,6 @@
 # web-solc
 
-[![npm version](https://badge.fury.io/js/web-solc.svg)](https://www.npmjs.com/package/web-solc)
+[![npm version](https://img.shields.io/npm/v/web-solc)](https://www.npmjs.com/package/web-solc)
 
 The **web-solc** package provides the ability to run a specific version of solc
 in the browser. This implementation uses web workers to avoid compatibility
@@ -53,19 +53,3 @@ const { contracts } = await compile({
 // later, don't forget to cleanup the running Worker
 stopWorker();
 ```
-
-## Example Vite app
-
-This repository contains a sample webapp that performs Solidity compilation
-inside the browser. See the
-[`./packages/example/`](https://github.com/gnidan/web-solc/tree/main/packages/example)
-directory in the repository root.
-
-## Inspiration
-
-This implementation was inspired by a few other resources that sadly did not
-completely suit the requirements driving this package.
-
-Without these, this implementation would never have gotten anywhere:
-- ["Loading solc with web workers" on the solc-js README](https://github.com/ethereum/solc-js?tab=readme-ov-file#loading-solc-with-web-workers)
-- [@agnostico/browser-solidity-compiler](https://github.com/rexdavinci/browser-solidity-compiler)
