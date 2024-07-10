@@ -1,14 +1,18 @@
 import { useState } from "react";
 import "./App.css";
 
-import { fetchSolc } from "web-solc";
+import { WebSolcProvider, useWebSolc } from "@web-solc/react";
 
-export default function App() {
+export function Example() {
+  const solc = useWebSolc("^0.8.25");
   const [output, setOutput] = useState("");
+
+  if (!solc) {
+    return <>Loading...</>;
+  }
 
   const compile = async () => {
     try {
-      const solc = await fetchSolc("^0.8.0");
       const result = await solc.compile({
         language: "Solidity",
         sources: {
@@ -36,5 +40,13 @@ export default function App() {
       <button onClick={compile}>Compile</button>
       <pre>{output}</pre>
     </div>
+  )
+}
+
+export default function App() {
+  return (
+    <WebSolcProvider>
+      <Example />
+    </WebSolcProvider>
   )
 }
