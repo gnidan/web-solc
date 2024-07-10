@@ -1,3 +1,7 @@
+export interface FetchSolcOptions {
+  repository?: RepositoryOptions;
+}
+
 export interface RepositoryOptions {
   baseUrl?: string;
 }

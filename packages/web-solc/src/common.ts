@@ -1,12 +1,16 @@
 import semver from "semver";
 
-import { defaultBaseUrl, type RepositoryOptions } from "./interface.js";
+import {
+  defaultBaseUrl,
+  type FetchSolcOptions,
+  type RepositoryOptions
+} from "./interface.js";
 
 export async function fetchLatestReleasedSoljsonSatisfyingVersionRange(
   versionRange: string,
-  options?: RepositoryOptions
+  { repository = {} }: FetchSolcOptions = {}
 ): Promise<string> {
-  const { builds } = await fetchBinList(options);
+  const { builds } = await fetchBinList(repository);
   const compatibleBuilds = builds
     .filter(({ longVersion }) => semver.satisfies(longVersion, versionRange));
 
@@ -18,7 +22,10 @@ export async function fetchLatestReleasedSoljsonSatisfyingVersionRange(
     }`);
   }
 
-  const soljsonText = await fetchSoljson(latestCompatibleBuild.path, options);
+  const soljsonText = await fetchSoljson(
+    latestCompatibleBuild.path,
+    repository
+  );
 
   return soljsonText;
 }
@@ -41,7 +48,9 @@ async function fetchBinList({
 
 async function fetchSoljson(
   path: string,
-  { baseUrl = defaultBaseUrl }: RepositoryOptions = {}
+  {
+      baseUrl = defaultBaseUrl
+  }: RepositoryOptions = {}
 ): Promise<string> {
   const response = await fetch(`${baseUrl}/${path}`);
 
