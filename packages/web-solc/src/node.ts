@@ -1,6 +1,6 @@
 import * as path from "path";
 
-import type { RepositoryOptions, WebSolc } from "./interface.js";
+import type { FetchSolcOptions, WebSolc } from "./interface.js";
 import type { WorkerSolc } from "./solc.worker.js";
 import { fetchLatestReleasedSoljsonSatisfyingVersionRange } from "./common.js";
 
@@ -8,7 +8,7 @@ export * from "./interface.js";
 
 export async function fetchSolc(
   versionRange: string,
-  options?: RepositoryOptions
+  options?: FetchSolcOptions
 ): Promise<WebSolc> {
   const soljsonText = await fetchLatestReleasedSoljsonSatisfyingVersionRange(
     versionRange,
