@@ -1,12 +1,14 @@
 {
   "name": "web-solc",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Browser compatible wrapper around solc in a web worker",
   "type": "module",
   "main": "dist/src/node.js",
   "browser": "dist/src/browser.js",
   "types": "./dist/src/browser.d.ts",
-  "files": ["./dist"],
+  "files": [
+    "./dist"
+  ],
   "author": "g. nicholas d'andrea <nick@gnidan.org>",
   "license": "MIT",
   "repository": {

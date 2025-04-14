@@ -1,11 +1,13 @@
 {
   "name": "@web-solc/react",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "In-browser Solidity compilation for React projects",
   "type": "module",
   "main": "./dist/src/index.jsx",
   "types": "./dist/src/index.d.ts",
-  "files": ["./dist"],
+  "files": [
+    "./dist"
+  ],
   "author": "g. nicholas d'andrea <nick@gnidan.org>",
   "license": "MIT",
   "repository": {
@@ -25,7 +27,7 @@
   },
   "dependencies": {
     "react": "^18.3.1",
-    "web-solc": "^0.5.1"
+    "web-solc": "^0.5.2"
   },
   "publishConfig": {
     "access": "public"
