@@ -6,6 +6,7 @@
   "main": "dist/src/node.js",
   "browser": "dist/src/browser.js",
   "types": "./dist/src/browser.d.ts",
+  "files": ["./dist"],
   "author": "g. nicholas d'andrea <nick@gnidan.org>",
   "license": "MIT",
   "repository": {

@@ -5,6 +5,7 @@
   "type": "module",
   "main": "./dist/src/index.jsx",
   "types": "./dist/src/index.d.ts",
+  "files": ["./dist"],
   "author": "g. nicholas d'andrea <nick@gnidan.org>",
   "license": "MIT",
   "repository": {
