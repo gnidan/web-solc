@@ -16,7 +16,13 @@
     "directory": "packages/react"
   },
   "scripts": {
-    "prepare": "tsc"
+    "prepare": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
     "@types/node": "^20.14.9",

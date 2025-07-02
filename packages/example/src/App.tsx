@@ -17,22 +17,22 @@ export function Example() {
         language: "Solidity",
         sources: {
           "test.sol": {
-            content: "pragma solidity ^0.8.0; contract Test {}"
-          }
+            content: "pragma solidity ^0.8.0; contract Test {}",
+          },
         },
         settings: {
           outputSelection: {
             "*": {
-              "*": ["*"]
-            }
-          }
-        }
+              "*": ["*"],
+            },
+          },
+        },
       });
       setOutput(JSON.stringify(result, null, 2));
     } catch (error) {
       setOutput(String(error));
     }
-  }
+  };
 
   return (
     <div>
@@ -40,7 +40,7 @@ export function Example() {
       <button onClick={compile}>Compile</button>
       <pre>{output}</pre>
     </div>
-  )
+  );
 }
 
 export default function App() {
@@ -48,5 +48,5 @@ export default function App() {
     <WebSolcProvider>
       <Example />
     </WebSolcProvider>
-  )
+  );
 }

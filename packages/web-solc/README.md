@@ -12,7 +12,6 @@ format that Solidity defines.
 
 This package also provides Node.js compatibility with no change in usage.
 
-
 ## Installation
 
 This assumes use of some kind of bundler like Vite or Next.js.
@@ -27,10 +26,7 @@ npm install --save web-solc
 // or via `const { fetchSolc } = await import("web-solc");`
 import { fetchSolc } from "web-solc";
 
-const {
-  compile,
-  stopWorker
-} = await fetchSolc("^0.8.25");
+const { compile, stopWorker } = await fetchSolc("^0.8.25");
 
 // note that this handles JSON stringifying/parsing automatically, instead of
 // how solc-js accepts/returns JSON strings.
@@ -38,16 +34,16 @@ const { contracts } = await compile({
   language: "Solidity",
   sources: {
     "test.sol": {
-      content: "pragma solidity ^0.8.0; contract Test {}"
-    }
+      content: "pragma solidity ^0.8.0; contract Test {}",
+    },
   },
   settings: {
     outputSelection: {
       "*": {
-        "*": ["*"]
-      }
-    }
-  }
+        "*": ["*"],
+      },
+    },
+  },
 });
 
 // later, don't forget to cleanup the running Worker

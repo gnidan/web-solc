@@ -32,7 +32,6 @@ constraints specified by `versionRange`.
 This hook relies on the use of a shared pool that must be instantiated via the
 `<WebSolcProvider>` component, this package's other main export.
 
-
 ```tsx
 import { useState } from "react";
 
@@ -44,9 +43,7 @@ export interface Props {
   compilerInput: CompilerInput;
 }
 
-export default function MyComponent({
-  compilerInput
-}) {
+export default function MyComponent({ compilerInput }) {
   const solc = useWebSolc("^0.8.25");
   if (!solc) {
     return <>Loading solc...</>;
@@ -56,13 +53,11 @@ export default function MyComponent({
 
   const compile = async () => {
     try {
-      setCompilation(
-        await solc.compile(compilerInput)
-      );
+      setCompilation(await solc.compile(compilerInput));
     } catch (error) {
       console.error("Compilation error: ", error);
     }
-  }
+  };
 
   return (
     <div>
@@ -90,9 +85,7 @@ import { WebSolcProvider } from "@web-solc/react";
 export default function App() {
   return (
     // ... other context providers
-    <WebSolcProvider>
-      {/* ... children */}
-    </WebSolcProvider>
+    <WebSolcProvider>{/* ... children */}</WebSolcProvider>
   );
 }
 ```
@@ -108,7 +101,7 @@ import { WebSolcProvider } from "@web-solc/react";
 
 export default function App() {
   return (
-  <WebSolcProvider repository={{ baseUrl: "https://custom.solc.builds" }}>
+    <WebSolcProvider repository={{ baseUrl: "https://custom.solc.builds" }}>
       {/* ... children */}
     </WebSolcProvider>
   );
