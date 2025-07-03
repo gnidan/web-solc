@@ -3,7 +3,7 @@ import semver from "semver";
 import {
   defaultBaseUrl,
   type FetchSolcOptions,
-  type RepositoryOptions
+  type RepositoryOptions,
 } from "./interface.js";
 
 export async function fetchLatestReleasedSoljsonSatisfyingVersionRange(
@@ -11,15 +11,16 @@ export async function fetchLatestReleasedSoljsonSatisfyingVersionRange(
   { repository = {} }: FetchSolcOptions = {}
 ): Promise<string> {
   const { builds } = await fetchBinList(repository);
-  const compatibleBuilds = builds
-    .filter(({ longVersion }) => semver.satisfies(longVersion, versionRange));
+  const compatibleBuilds = builds.filter(({ longVersion }) =>
+    semver.satisfies(longVersion, versionRange)
+  );
 
   const latestCompatibleBuild = compatibleBuilds.at(-1);
 
   if (!latestCompatibleBuild) {
-    throw new Error(`Could not find solc version to satisfy requested range ${
-      versionRange
-    }`);
+    throw new Error(
+      `Could not find solc version to satisfy requested range ${versionRange}`
+    );
   }
 
   const soljsonText = await fetchSoljson(
@@ -39,7 +40,7 @@ interface BinList {
 }
 
 async function fetchBinList({
-  baseUrl = defaultBaseUrl
+  baseUrl = defaultBaseUrl,
 }: RepositoryOptions = {}): Promise<BinList> {
   const response = await fetch(`${baseUrl}/list.json`);
 
@@ -48,9 +49,7 @@ async function fetchBinList({
 
 async function fetchSoljson(
   path: string,
-  {
-      baseUrl = defaultBaseUrl
-  }: RepositoryOptions = {}
+  { baseUrl = defaultBaseUrl }: RepositoryOptions = {}
 ): Promise<string> {
   const response = await fetch(`${baseUrl}/${path}`);
 

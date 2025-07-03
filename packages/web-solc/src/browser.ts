@@ -14,6 +14,10 @@ export async function fetchSolc(
     options
   );
 
+  return loadSolc(soljsonText);
+}
+
+export function loadSolc(soljsonText: string): WebSolc {
   const { worker, stopWorker } = startWorker();
 
   return {
@@ -33,18 +37,17 @@ export async function fetchSolc(
       });
     },
 
-    stopWorker
-  }
+    stopWorker,
+  };
 }
 
 function startWorker(): {
   worker: Worker;
   stopWorker: () => void;
 } {
-  const workerBlob = new Blob(
-    [`(${solcWorker.toString()})()`],
-    { type: "application/javascript" }
-  );
+  const workerBlob = new Blob([`(${solcWorker.toString()})()`], {
+    type: "application/javascript",
+  });
   const workerUrl = URL.createObjectURL(workerBlob);
   const worker = new Worker(workerUrl);
 
@@ -53,6 +56,6 @@ function startWorker(): {
     stopWorker: () => {
       worker.terminate();
       URL.revokeObjectURL(workerUrl);
-    }
+    },
   };
 }

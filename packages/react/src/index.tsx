@@ -1,10 +1,10 @@
-import {
+import React, {
   createContext,
   useCallback,
   useContext,
   useEffect,
   useMemo,
-  useState
+  useState,
 } from "react";
 
 import {
@@ -12,11 +12,10 @@ import {
   type WebSolc,
   type FetchSolcOptions,
   type CompilerInput,
-  type CompilerOutput
+  type CompilerOutput,
 } from "web-solc";
 
-export interface WebSolcProviderProps extends FetchSolcOptions {
-}
+export type WebSolcProviderProps = FetchSolcOptions;
 
 /**
  * This component manages a collection of Solidity compiler instances and
@@ -31,7 +30,7 @@ export function WebSolcProvider({
 }: React.PropsWithChildren<WebSolcProviderProps>): JSX.Element {
   // State to store compiler instances
   const [solcs, setSolcs] = useState<{
-    [versionRange: string]: WebSolc
+    [versionRange: string]: WebSolc;
   }>({});
 
   // Cleanup effect to stop all workers when the provider unmounts
@@ -44,21 +43,24 @@ export function WebSolcProvider({
   }, [solcs]);
 
   // Memoized function to get or create a compiler instance
-  const contextValue = useMemo(() => (
-    async (versionRange: string) => {
+  const contextValue = useMemo(
+    () => async (versionRange: string) => {
       if (versionRange in solcs) {
         return solcs[versionRange];
       }
 
       const solc = await fetchSolc(versionRange, options);
-      setSolcs(previous => ({ ...previous, [versionRange]: solc }));
+      setSolcs((previous) => ({ ...previous, [versionRange]: solc }));
       return solc;
-    }
-  ), [solcs, options]);
+    },
+    [solcs, options]
+  );
 
-  return <WebSolcContext.Provider value={contextValue}>
-    {children}
-  </WebSolcContext.Provider>;
+  return (
+    <WebSolcContext.Provider value={contextValue}>
+      {children}
+    </WebSolcContext.Provider>
+  );
 }
 
 /**
@@ -80,7 +82,7 @@ export function useWebSolc(
   useEffect(() => {
     let isMounted = true;
 
-    getSolc(versionRange).then(solc => {
+    getSolc(versionRange).then((solc) => {
       if (isMounted) {
         setSolc(solc);
       }
@@ -88,7 +90,7 @@ export function useWebSolc(
 
     return () => {
       isMounted = false;
-    }
+    };
   }, [getSolc, versionRange]);
 
   // Memoized compile function
@@ -103,9 +105,7 @@ export function useWebSolc(
   );
 
   // Return the compile function if the compiler is ready, otherwise undefined
-  return solc
-    ? { compile }
-    : undefined;
+  return solc ? { compile } : undefined;
 }
 
 // Type for the getSolc function

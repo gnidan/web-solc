@@ -27,16 +27,16 @@ const { contracts } = await compile({
   language: "Solidity",
   sources: {
     "test.sol": {
-      content: "pragma solidity ^0.8.0; contract Test {}"
-    }
+      content: "pragma solidity ^0.8.0; contract Test {}",
+    },
   },
   settings: {
     outputSelection: {
       "*": {
-        "*": ["*"]
-      }
-    }
-  }
+        "*": ["*"],
+      },
+    },
+  },
 });
 
 // Don't forget to cleanup the running Worker when done
@@ -68,7 +68,11 @@ function App() {
   );
 }
 
-function CompilationComponent({ compilerInput }: { compilerInput: CompilerInput }) {
+function CompilationComponent({
+  compilerInput,
+}: {
+  compilerInput: CompilerInput;
+}) {
   const solc = useWebSolc("^0.8.25");
 
   if (!solc) {

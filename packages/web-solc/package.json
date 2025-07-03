@@ -17,12 +17,25 @@
     "directory": "packages/web-solc"
   },
   "scripts": {
-    "prepare": "tsc"
+    "prepare": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run --config vitest.config.integration.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
+    "@playwright/test": "^1.53.2",
+    "@testing-library/dom": "^10.0.0",
     "@types/node": "^20.14.9",
     "@types/semver": "^7.5.8",
-    "typescript": "^5.5.3"
+    "@vitest/browser": "^3.2.4",
+    "@vitest/coverage-v8": "3.2.4",
+    "playwright": "^1.53.2",
+    "typescript": "^5.5.3",
+    "vite": "^7.0.0"
   },
   "dependencies": {
     "semver": "^7.6.2"

@@ -15,7 +15,10 @@ export interface WebSolc {
 
 export type CompilerInput = object;
 export interface CompilerOutput {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   errors?: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   sources: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   contracts: any[];
 }

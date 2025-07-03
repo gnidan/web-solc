@@ -6,17 +6,17 @@ const result = await compile({
   language: "Solidity",
   sources: {
     "test.sol": {
-      content: "pragma solidity ^0.8.0; contract Test {}"
-    }
+      content: "pragma solidity ^0.8.0; contract Test {}",
+    },
   },
   settings: {
     viaIR: true,
     outputSelection: {
       "*": {
-        "*": ["*"]
-      }
-    }
-  }
+        "*": ["*"],
+      },
+    },
+  },
 });
 
 console.log("result %o", result);
