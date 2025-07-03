@@ -7,6 +7,32 @@ vi.mock("./common.js", () => ({
   fetchLatestReleasedSoljsonSatisfyingVersionRange: vi.fn(),
 }));
 
+// Helper to create mock soljson text with proper exports
+const createMockSoljson = (
+  api:
+    | "modern"
+    | "compileStandard"
+    | "compileJSONMulti"
+    | "compileJSON" = "modern",
+  compileResult = { contracts: {}, sources: {}, errors: [] }
+) => {
+  const exportMarker = {
+    modern: "Module._solidity_compile = function() {};",
+    compileStandard: "Module._compileStandard = function() {};",
+    compileJSONMulti: "Module._compileJSONMulti = function() {};",
+    compileJSON: "Module._compileJSON = function() {};",
+  }[api];
+
+  return `
+    ${exportMarker}
+    Module.cwrap = function(name, returnType, argTypes) {
+      return function(input) {
+        return JSON.stringify(${JSON.stringify(compileResult)});
+      };
+    };
+  `;
+};
+
 describe("node", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -14,26 +40,7 @@ describe("node", () => {
 
   describe("fetchSolc", () => {
     it("should create a WebSolc instance with compile and stopWorker methods", async () => {
-      // Create a mock Solidity compiler module
-      const mockSoljsonText = `
-        Module.onRuntimeInitialized = null;
-        Module.cwrap = function(name, returnType, argTypes) {
-          return function(input) {
-            // Mock compile function that returns valid JSON
-            const parsed = JSON.parse(input);
-            return JSON.stringify({
-              contracts: {},
-              sources: {},
-              errors: []
-            });
-          };
-        };
-        
-        // Simulate async initialization
-        if (Module.onRuntimeInitialized) {
-          setTimeout(() => Module.onRuntimeInitialized(), 0);
-        }
-      `;
+      const mockSoljsonText = createMockSoljson();
 
       vi.mocked(
         common.fetchLatestReleasedSoljsonSatisfyingVersionRange
@@ -51,9 +58,7 @@ describe("node", () => {
     });
 
     it("should pass options to fetchLatestReleasedSoljsonSatisfyingVersionRange", async () => {
-      const mockSoljsonText = `
-        Module.cwrap = () => () => '{}';
-      `;
+      const mockSoljsonText = createMockSoljson();
 
       vi.mocked(
         common.fetchLatestReleasedSoljsonSatisfyingVersionRange
@@ -81,13 +86,7 @@ describe("node", () => {
         errors: [],
       };
 
-      const mockSoljsonText = `
-        Module.cwrap = function(name, returnType, argTypes) {
-          return function(input) {
-            return JSON.stringify(${JSON.stringify(mockCompileResult)});
-          };
-        };
-      `;
+      const mockSoljsonText = createMockSoljson("modern", mockCompileResult);
 
       vi.mocked(
         common.fetchLatestReleasedSoljsonSatisfyingVersionRange
@@ -110,6 +109,7 @@ describe("node", () => {
 
     it("should handle compilation errors", async () => {
       const mockSoljsonText = `
+        Module._solidity_compile = function() {}; // Export marker
         Module.cwrap = function() {
           return function(input) {
             throw new Error('Compilation failed');
@@ -145,6 +145,7 @@ describe("node", () => {
     it("should handle async module initialization", async () => {
       const mockSoljsonText = `
         // Simulate async initialization
+        Module._solidity_compile = function() {}; // Export marker
         Module.onRuntimeInitialized = () => {};
         setTimeout(() => {
           Module.cwrap = () => () => '{"contracts":{}}';
@@ -161,9 +162,7 @@ describe("node", () => {
     });
 
     it("stopWorker should be a no-op", async () => {
-      const mockSoljsonText = `
-        Module.cwrap = () => () => '{}';
-      `;
+      const mockSoljsonText = createMockSoljson();
 
       vi.mocked(
         common.fetchLatestReleasedSoljsonSatisfyingVersionRange
@@ -178,9 +177,7 @@ describe("node", () => {
 
   describe("loadSolc", () => {
     it("should create a WebSolc instance from provided soljson text", async () => {
-      const mockSoljsonText = `
-        Module.cwrap = () => () => '{"contracts":{"test.sol":{"Test":{}}}}';
-      `;
+      const mockSoljsonText = createMockSoljson();
 
       const { loadSolc } = await import("./node.js");
       const solc = await loadSolc(mockSoljsonText);
@@ -191,6 +188,7 @@ describe("node", () => {
 
     it("should compile using provided soljson", async () => {
       const mockSoljsonText = `
+        Module._solidity_compile = function() {}; // Export marker
         Module.cwrap = () => (input) => {
           const parsed = JSON.parse(input);
           return JSON.stringify({
@@ -217,6 +215,55 @@ describe("node", () => {
       expect(result).toHaveProperty("contracts");
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       expect((result as any).contracts["test.sol"]).toHaveProperty("Test");
+    });
+
+    it("should support legacy compileStandard API (0.4.11+)", async () => {
+      const mockSoljsonText = createMockSoljson("compileStandard", {
+        contracts: { "test.sol": { Test: { abi: [] } } },
+      });
+
+      const { loadSolc } = await import("./node.js");
+      const solc = await loadSolc(mockSoljsonText);
+
+      const result = await solc.compile({ sources: {} });
+      expect(result).toHaveProperty("contracts");
+    });
+
+    it("should support legacy compileJSONMulti API", async () => {
+      const mockSoljsonText = createMockSoljson("compileJSONMulti", {
+        contracts: { "test.sol": { Test: { abi: [] } } },
+      });
+
+      const { loadSolc } = await import("./node.js");
+      const solc = await loadSolc(mockSoljsonText);
+
+      const result = await solc.compile({ sources: {} });
+      expect(result).toHaveProperty("contracts");
+    });
+
+    it("should support oldest compileJSON API", async () => {
+      const mockSoljsonText = createMockSoljson("compileJSON", {
+        contracts: { "test.sol": { Test: { abi: [] } } },
+      });
+
+      const { loadSolc } = await import("./node.js");
+      const solc = await loadSolc(mockSoljsonText);
+
+      const result = await solc.compile({ sources: {} });
+      expect(result).toHaveProperty("contracts");
+    });
+
+    it("should throw if no compatible API is found", async () => {
+      const mockSoljsonText = `
+        Module.cwrap = function(name) {
+          throw new Error("Function not found: " + name);
+        };
+      `;
+
+      const { loadSolc } = await import("./node.js");
+      await expect(loadSolc(mockSoljsonText)).rejects.toThrow(
+        "No compatible Solidity compiler API found"
+      );
     });
   });
 });

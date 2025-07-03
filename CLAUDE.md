@@ -144,6 +144,7 @@ The project uses **Vitest** for unit testing and **Playwright** for browser inte
 ### Code Quality Tools
 
 #### Linting
+
 ```bash
 # Run ESLint across the entire monorepo
 yarn lint
@@ -156,11 +157,13 @@ cd packages/web-solc && yarn lint
 ```
 
 The project uses ESLint 8 with TypeScript support and the following plugins:
+
 - `@typescript-eslint` for TypeScript-specific rules
 - `eslint-plugin-react` and `eslint-plugin-react-hooks` for React code
 - `eslint-plugin-prettier` to integrate Prettier formatting
 
 #### Formatting
+
 ```bash
 # Format all files
 yarn format
@@ -170,6 +173,7 @@ yarn format:check
 ```
 
 Prettier is configured with:
+
 - 80 character line width
 - Double quotes for strings
 - Trailing commas (ES5 style)

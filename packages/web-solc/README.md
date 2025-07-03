@@ -49,3 +49,24 @@ const { contracts } = await compile({
 // later, don't forget to cleanup the running Worker
 stopWorker();
 ```
+
+## Version Compatibility
+
+web-solc supports multiple versions of the Solidity compiler by detecting and using the appropriate API:
+
+- **Modern versions (0.5.0+)**: Uses the `solidity_compile` API
+- **Standard JSON versions (0.4.11+)**: Uses the `compileStandard` API
+- **Legacy versions (0.4.0-0.4.10)**: Uses `compileJSONMulti` or `compileJSON` APIs
+
+The package automatically detects which API is available in the loaded compiler and uses it transparently.
+
+### Known Limitations
+
+Some very old compiler versions have compatibility issues:
+
+- **Large compiler files (e.g., 0.4.18)** may exceed browser stack size limits due to `new Function()` constraints
+- **0.4.x versions** required special patching to work in browser environments, which has been implemented for versions like 0.4.26
+- 0.4.x versions work correctly in Node.js environments
+- Very old versions (< 0.4.11) may not support Standard JSON input/output format
+
+For best compatibility, use Solidity versions 0.5.0 or newer. However, many 0.4.x versions are now supported with automatic compatibility patches.
