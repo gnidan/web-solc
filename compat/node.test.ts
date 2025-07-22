@@ -79,7 +79,7 @@ describe("Node.js Integration Tests", () => {
       );
     }
 
-    const { loadSolc } = await import("../../dist/src/node.js");
+    const { loadSolc } = await import("../packages/web-solc/dist/src/node.js");
     const solc = await loadSolc(soljsonText);
 
     try {
