@@ -1,1 +1,6 @@
-
+{
+  "schemaVersion": 1,
+  "label": "node.js support",
+  "message": "0.4.16+",
+  "color": "brightgreen"
+}

@@ -69,7 +69,9 @@ describe("node", () => {
 
       expect(
         common.fetchLatestReleasedSoljsonSatisfyingVersionRange
-      ).toHaveBeenCalledWith("^0.8.0", options);
+      ).toHaveBeenCalledWith("^0.8.0", {
+        repository: { baseUrl: "https://custom.url" },
+      });
     });
 
     it("should compile Solidity code correctly", async () => {

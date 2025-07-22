@@ -2,13 +2,13 @@ import semver from "semver";
 
 import {
   defaultBaseUrl,
-  type FetchSolcOptions,
+  type FetchOptions,
   type RepositoryOptions,
 } from "./interface.js";
 
 export async function fetchLatestReleasedSoljsonSatisfyingVersionRange(
   versionRange: string,
-  { repository = {} }: FetchSolcOptions = {}
+  { repository = {} }: FetchOptions = {}
 ): Promise<string> {
   const { builds } = await fetchBinList(repository);
   const compatibleBuilds = builds.filter(({ longVersion }) =>

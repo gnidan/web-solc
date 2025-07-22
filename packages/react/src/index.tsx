@@ -8,14 +8,14 @@ import React, {
 } from "react";
 
 import {
-  fetchSolc,
+  fetchAndLoadSolc,
   type WebSolc,
-  type FetchSolcOptions,
+  type FetchOptions,
   type CompilerInput,
   type CompilerOutput,
 } from "web-solc";
 
-export type WebSolcProviderProps = FetchSolcOptions;
+export type WebSolcProviderProps = FetchOptions;
 
 /**
  * This component manages a collection of Solidity compiler instances and
@@ -49,7 +49,7 @@ export function WebSolcProvider({
         return solcs[versionRange];
       }
 
-      const solc = await fetchSolc(versionRange, options);
+      const solc = await fetchAndLoadSolc(versionRange, { fetch: options });
       setSolcs((previous) => ({ ...previous, [versionRange]: solc }));
       return solc;
     },

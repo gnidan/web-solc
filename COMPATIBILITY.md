@@ -2,7 +2,7 @@
 
 This document details the compatibility of web-solc with different Solidity compiler versions based on automated testing.
 
-Generated: 2025-07-22T05:11:43.908Z  
+Generated: 2025-07-22T19:04:17.469Z  
 **Total versions tested**: 113
 
 ## Quick Reference

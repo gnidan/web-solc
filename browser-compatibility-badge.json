@@ -1,1 +1,6 @@
-
+{
+  "schemaVersion": 1,
+  "label": "browser support",
+  "message": "0.4.26+",
+  "color": "brightgreen"
+}

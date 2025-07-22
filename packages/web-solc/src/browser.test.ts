@@ -78,7 +78,9 @@ describe("browser", () => {
 
       expect(
         common.fetchLatestReleasedSoljsonSatisfyingVersionRange
-      ).toHaveBeenCalledWith("^0.8.0", options);
+      ).toHaveBeenCalledWith("^0.8.0", {
+        repository: { baseUrl: "https://custom.url" },
+      });
     });
 
     it("should handle compile request through worker", async () => {
@@ -115,6 +117,7 @@ describe("browser", () => {
       expect(mockWorker.postMessage).toHaveBeenCalledWith({
         soljsonUrl: "blob:mock-url",
         input,
+        disabledInterfaces: [],
       });
 
       // Simulate worker response
@@ -249,6 +252,7 @@ describe("browser", () => {
       expect(mockWorker.postMessage).toHaveBeenCalledWith({
         soljsonUrl: "blob:mock-url",
         input,
+        disabledInterfaces: [],
       });
 
       // Simulate worker response

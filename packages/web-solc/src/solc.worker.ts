@@ -19,12 +19,14 @@ interface EmscriptenModule {
   _compileJSON?: unknown;
 }
 
+import type { LegacyInterface } from "./interface.js";
+
 export default function solcWorker() {
   self.onmessage = async (event: MessageEvent) => {
     try {
-      const { soljsonUrl, input } = event.data;
+      const { soljsonUrl, input, disabledInterfaces = [] } = event.data;
 
-      const solc = await loadSolcFromUrl(soljsonUrl);
+      const solc = await loadSolcFromUrl(soljsonUrl, disabledInterfaces);
 
       const output = JSON.parse(solc.compile(JSON.stringify(input)));
 
@@ -48,7 +50,10 @@ export default function solcWorker() {
     }
   };
 
-  async function loadSolcFromUrl(soljsonUrl: string): Promise<WorkerSolc> {
+  async function loadSolcFromUrl(
+    soljsonUrl: string,
+    disabledInterfaces: LegacyInterface[]
+  ): Promise<WorkerSolc> {
     // Use importScripts to load the soljson from blob URL
     const Module: EmscriptenModule = {
       exports: {},
@@ -62,12 +67,8 @@ export default function solcWorker() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (self as any).Module = Module;
 
-    try {
-      // Try to import the script directly
-      importScripts(soljsonUrl);
-    } catch (error) {
-      throw error;
-    }
+    // Try to import the script directly
+    importScripts(soljsonUrl);
 
     // Module is now loaded and ready
 
@@ -98,55 +99,91 @@ export default function solcWorker() {
     };
 
     // Try different compiler APIs in order of preference
-    let compile: (input: string) => string;
+    let compile: ((input: string) => string) | undefined;
+
+    // Helper to check if an interface is disabled
+    const isDisabled = (interfaceName: LegacyInterface) =>
+      disabledInterfaces.includes(interfaceName);
 
     // For 0.4.x versions, check for underscore-prefixed exports but cwrap without underscore
     const ModuleWithFuncs = Module as EmscriptenModule &
       Record<string, unknown>;
-    if (Module._compileStandard || ModuleWithFuncs.compileStandard) {
+
+    // Try compile APIs in order of preference based on what's available
+    if (
+      (Module._compileStandard || ModuleWithFuncs.compileStandard) &&
+      !isDisabled("compile-standard")
+    ) {
       compile = ModuleTyped.cwrap("compileStandard", "string", ["string"]);
-    } else if (Module._compileJSONMulti) {
+    } else if (Module._compileJSONMulti && !isDisabled("compile-json-multi")) {
       const compileMulti = ModuleTyped.cwrap("compileJSONMulti", "string", [
         "string",
         "string",
         "number",
       ]);
       compile = (input: string) => compileMulti(input, "", 0);
-    } else if (Module._compileJSON) {
+    } else if (Module._compileJSON && !isDisabled("compile-json")) {
       const compileJSON = ModuleTyped.cwrap("compileJSON", "string", [
         "string",
         "number",
       ]);
       compile = (input: string) => compileJSON(input, 1); // optimize=true
     } else {
-      // Try modern APIs
-      try {
-        const solidity_compile = ModuleTyped.cwrap(
-          "solidity_compile",
-          "string",
-          ["string", "number"]
-        );
-        compile = (input: string) => solidity_compile(input, 0);
-      } catch {
+      // Try modern APIs and fallbacks
+      let found = false;
+
+      // Try modern API
+      if (!isDisabled("solidity-compile")) {
         try {
-          compile = ModuleTyped.cwrap("compileStandard", "string", ["string"]);
+          const solidity_compile = ModuleTyped.cwrap(
+            "solidity_compile",
+            "string",
+            ["string", "number"]
+          );
+          compile = (input: string) => solidity_compile(input, 0);
+          found = true;
         } catch {
-          try {
-            const compileMulti = ModuleTyped.cwrap(
-              "compileJSONMulti",
-              "string",
-              ["string", "string", "number"]
-            );
-            compile = (input: string) => compileMulti(input, "", 0);
-          } catch {
-            const compileJSON = ModuleTyped.cwrap("compileJSON", "string", [
-              "string",
-              "number",
-            ]);
-            compile = (input: string) => compileJSON(input, 1); // optimize=true
-          }
+          // Continue to next
         }
       }
+
+      // Try standard API
+      if (!found && !isDisabled("compile-standard")) {
+        try {
+          compile = ModuleTyped.cwrap("compileStandard", "string", ["string"]);
+          found = true;
+        } catch {
+          // Continue to next
+        }
+      }
+
+      // Try multi-file API
+      if (!found && !isDisabled("compile-json-multi")) {
+        try {
+          const compileMulti = ModuleTyped.cwrap("compileJSONMulti", "string", [
+            "string",
+            "string",
+            "number",
+          ]);
+          compile = (input: string) => compileMulti(input, "", 0);
+          found = true;
+        } catch {
+          // Continue to next
+        }
+      }
+
+      // Try single-file API
+      if (!found && !isDisabled("compile-json")) {
+        const compileJSON = ModuleTyped.cwrap("compileJSON", "string", [
+          "string",
+          "number",
+        ]);
+        compile = (input: string) => compileJSON(input, 1); // optimize=true
+      }
+    }
+
+    if (!compile) {
+      throw new Error("No compatible compiler API found or all APIs disabled");
     }
 
     const solc = { compile };
