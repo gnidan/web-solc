@@ -14,62 +14,10 @@ describe("compatibility options", () => {
       await expect(
         loadSolc(mockSoljson, {
           compatibility: {
-            disableUnderscorePatching: true,
             disableLegacyInterfaceAdapters: ["compile-json"],
           },
         })
       ).resolves.toBeDefined();
-    });
-
-    it("should apply underscore patching by default", async () => {
-      // Mock soljson with getCFunc pattern that needs patching
-      const mockSoljson = `
-        Module._solidity_compile = function() {};
-        Module.cwrap = () => () => '{"contracts": {}}';
-        var getCFunc = function(ident) {
-          var func = Module["_" + ident];
-          assert(func, "Cannot call unknown function " + ident);
-        };
-      `;
-
-      // loadSolc will patch the string
-      const solc = await loadSolc(mockSoljson);
-      expect(solc).toBeDefined();
-
-      // We can't check the patched string directly since it happens internally
-      // Instead verify that loadSolc works with code that would need patching
-    });
-
-    it("should skip underscore patching when disabled", async () => {
-      const mockSoljson = `
-        Module._solidity_compile = function() {};
-        Module.cwrap = () => () => '{"contracts": {}}';
-      `;
-
-      // Track string replace calls
-      const originalReplace = String.prototype.replace;
-      let getCFuncReplaceCount = 0;
-      String.prototype.replace = function (this: string, ...args: any[]) {
-        if (
-          args[0] ===
-          'var func=Module["_"+ident];assert(func,"Cannot call unknown function "+ident'
-        ) {
-          getCFuncReplaceCount++;
-        }
-        return originalReplace.apply(this, args as any);
-      };
-
-      await loadSolc(mockSoljson, {
-        compatibility: {
-          disableUnderscorePatching: true,
-        },
-      });
-
-      // Restore original replace
-      String.prototype.replace = originalReplace;
-
-      // The getCFunc patching should not have been called
-      expect(getCFuncReplaceCount).toBe(0);
     });
 
     it("should disable specific legacy interface adapters", async () => {
@@ -118,7 +66,6 @@ describe("compatibility options", () => {
           },
           load: {
             compatibility: {
-              disableUnderscorePatching: true,
               disableLegacyInterfaceAdapters: [
                 legacyInterfaces.compileJson,
                 legacyInterfaces.compileJsonMulti,

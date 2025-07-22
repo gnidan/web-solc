@@ -23,9 +23,6 @@ export type LegacyInterface =
 // Options for loading/configuring Solidity compiler
 export interface LoadOptions {
   compatibility?: {
-    // Disable the getCFunc underscore prefix fix for 0.4.x versions
-    disableUnderscorePatching?: boolean;
-
     // Disable specific compiler interface adapters
     // By default, all interfaces are tried in order of preference
     // Pass an array of interfaces to disable
