@@ -10,15 +10,13 @@ export interface FetchOptions {
 }
 
 // Constants for the different compiler interfaces
-export const legacyInterfaces = {
-  compileJson: "compile-json", // Oldest single-file API
-  compileJsonMulti: "compile-json-multi", // Legacy multi-file API
-  compileStandard: "compile-standard", // Standard JSON API (0.4.11+)
-  solidityCompile: "solidity-compile", // Modern API (0.5.0+)
+export const compilerInterfaces = {
+  legacy: "legacy", // Standard JSON API (0.4.x)
+  modern: "modern", // Modern API (0.5.0+)
 } as const;
 
-export type LegacyInterface =
-  (typeof legacyInterfaces)[keyof typeof legacyInterfaces];
+export type CompilerInterface =
+  (typeof compilerInterfaces)[keyof typeof compilerInterfaces];
 
 // Options for loading/configuring Solidity compiler
 export interface LoadOptions {
@@ -26,7 +24,7 @@ export interface LoadOptions {
     // Disable specific compiler interface adapters
     // By default, all interfaces are tried in order of preference
     // Pass an array of interfaces to disable
-    disableLegacyInterfaceAdapters?: LegacyInterface[];
+    disableCompilerInterfaces?: CompilerInterface[];
   };
 }
 

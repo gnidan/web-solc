@@ -56,7 +56,7 @@ export function loadSolc(soljsonText: string, options?: LoadOptions): WebSolc {
           soljsonUrl,
           input,
           disabledInterfaces:
-            options?.compatibility?.disableLegacyInterfaceAdapters || [],
+            options?.compatibility?.disableCompilerInterfaces || [],
         });
       });
     },

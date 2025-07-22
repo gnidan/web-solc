@@ -231,30 +231,6 @@ describe("node", () => {
       expect(result).toHaveProperty("contracts");
     });
 
-    it("should support legacy compileJSONMulti API", async () => {
-      const mockSoljsonText = createMockSoljson("compileJSONMulti", {
-        contracts: { "test.sol": { Test: { abi: [] } } },
-      });
-
-      const { loadSolc } = await import("./node.js");
-      const solc = await loadSolc(mockSoljsonText);
-
-      const result = await solc.compile({ sources: {} });
-      expect(result).toHaveProperty("contracts");
-    });
-
-    it("should support oldest compileJSON API", async () => {
-      const mockSoljsonText = createMockSoljson("compileJSON", {
-        contracts: { "test.sol": { Test: { abi: [] } } },
-      });
-
-      const { loadSolc } = await import("./node.js");
-      const solc = await loadSolc(mockSoljsonText);
-
-      const result = await solc.compile({ sources: {} });
-      expect(result).toHaveProperty("contracts");
-    });
-
     it("should throw if no compatible API is found", async () => {
       const mockSoljsonText = `
         Module.cwrap = function(name) {

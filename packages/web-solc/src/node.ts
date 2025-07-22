@@ -4,7 +4,7 @@ import type {
   FetchAndLoadOptions,
   WebSolc,
   LoadOptions,
-  LegacyInterface,
+  CompilerInterface,
   FetchSolcOptions,
 } from "./interface.js";
 import type { WorkerSolc } from "./solc.worker.js";
@@ -55,7 +55,7 @@ async function loadSoljson(
 ): Promise<WorkerSolc> {
   // Apply compatibility options
   const disabledInterfaces =
-    options?.compatibility?.disableLegacyInterfaceAdapters ?? [];
+    options?.compatibility?.disableCompilerInterfaces ?? [];
 
   const baseModule: Record<string, unknown> = {
     wasmBinary: null,
@@ -101,14 +101,14 @@ async function loadSoljson(
   }
 
   // Helper to check if an interface is disabled
-  const isDisabled = (interfaceName: LegacyInterface) =>
+  const isDisabled = (interfaceName: CompilerInterface) =>
     disabledInterfaces.includes(interfaceName);
 
   // Try different compiler APIs in order of preference
   let compile: ((input: string) => string) | undefined;
 
   // For newer versions, check underscore-prefixed exports first
-  if (Module["_solidity_compile"] && !isDisabled("solidity-compile")) {
+  if (Module["_solidity_compile"] && !isDisabled("modern")) {
     // Modern API (0.5.0+) - check if it actually works
     try {
       const solidity_compile = Module.cwrap("solidity_compile", "string", [
@@ -127,10 +127,8 @@ async function loadSoljson(
   }
 
   if (!compile) {
-    // For older versions, try the APIs in order without underscores first
-
-    // Standard JSON API (0.4.11+)
-    if (!compile && !isDisabled("compile-standard")) {
+    // Legacy API for 0.4.x versions
+    if (!compile && !isDisabled("legacy")) {
       try {
         compile = Module.cwrap("compileStandard", "string", ["string"]);
       } catch {
@@ -138,35 +136,8 @@ async function loadSoljson(
       }
     }
 
-    // Legacy multi-file API
-    if (!compile && !isDisabled("compile-json-multi")) {
-      try {
-        const compileMulti = Module.cwrap("compileJSONMulti", "string", [
-          "string",
-          "string",
-          "number",
-        ]);
-        compile = (input: string) => compileMulti(input, "", 0);
-      } catch {
-        // Continue to next
-      }
-    }
-
-    // Oldest single-file API
-    if (!compile && !isDisabled("compile-json")) {
-      try {
-        const compileJSON = Module.cwrap("compileJSON", "string", [
-          "string",
-          "number",
-        ]);
-        compile = (input: string) => compileJSON(input, 1); // optimize=true
-      } catch {
-        // Continue to next
-      }
-    }
-
     // Last resort: try modern API without checking exports
-    if (!compile && !isDisabled("solidity-compile")) {
+    if (!compile && !isDisabled("modern")) {
       try {
         const solidity_compile = Module.cwrap("solidity_compile", "string", [
           "string",

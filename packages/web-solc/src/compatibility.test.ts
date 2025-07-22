@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { loadSolc } from "./node.js";
-import { legacyInterfaces } from "./interface.js";
+import { compilerInterfaces } from "./interface.js";
 
 describe("compatibility options", () => {
   describe("loadSolc with options", () => {
@@ -14,14 +14,14 @@ describe("compatibility options", () => {
       await expect(
         loadSolc(mockSoljson, {
           compatibility: {
-            disableLegacyInterfaceAdapters: ["compile-json"],
+            disableCompilerInterfaces: ["legacy"],
           },
         })
       ).resolves.toBeDefined();
     });
 
-    it("should disable specific legacy interface adapters", async () => {
-      // Mock with only compileStandard (no modern API)
+    it("should disable specific compiler interfaces", async () => {
+      // Mock with only legacy API (compileStandard)
       const mockSoljson = `
         Module._compileStandard = function() {};
         Module.cwrap = function(name) {
@@ -36,11 +36,11 @@ describe("compatibility options", () => {
       const solc1 = await loadSolc(mockSoljson);
       expect(solc1).toBeDefined();
 
-      // Should throw when disabling compileStandard adapter
+      // Should throw when disabling legacy adapter
       await expect(
         loadSolc(mockSoljson, {
           compatibility: {
-            disableLegacyInterfaceAdapters: ["compile-standard"],
+            disableCompilerInterfaces: ["legacy"],
           },
         })
       ).rejects.toThrow("No compatible Solidity compiler API found");
@@ -66,9 +66,9 @@ describe("compatibility options", () => {
           },
           load: {
             compatibility: {
-              disableLegacyInterfaceAdapters: [
-                legacyInterfaces.compileJson,
-                legacyInterfaces.compileJsonMulti,
+              disableCompilerInterfaces: [
+                compilerInterfaces.legacy,
+                compilerInterfaces.modern,
               ],
             },
           },
@@ -77,12 +77,10 @@ describe("compatibility options", () => {
     });
   });
 
-  describe("legacy interface constants", () => {
+  describe("compiler interface constants", () => {
     it("should export the correct interface names", () => {
-      expect(legacyInterfaces.compileJson).toBe("compile-json");
-      expect(legacyInterfaces.compileJsonMulti).toBe("compile-json-multi");
-      expect(legacyInterfaces.compileStandard).toBe("compile-standard");
-      expect(legacyInterfaces.solidityCompile).toBe("solidity-compile");
+      expect(compilerInterfaces.legacy).toBe("legacy");
+      expect(compilerInterfaces.modern).toBe("modern");
     });
   });
 });
