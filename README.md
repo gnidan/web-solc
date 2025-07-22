@@ -9,6 +9,9 @@ capabilities for web environments:
 ## web-solc
 
 [![npm version](https://img.shields.io/npm/v/web-solc)](https://www.npmjs.com/package/web-solc)
+[![Browser Support](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/gnidan/web-solc/main/browser-compatibility-badge.json&query=$.message&label=browser%20support&color=brightgreen)](./COMPATIBILITY.md)
+[![Node.js Support](https://img.shields.io/badge/dynamic/json?url=https://raw.githubusercontent.com/gnidan/web-solc/main/node-compatibility-badge.json&query=$.message&label=node.js%20support&color=brightgreen)](./COMPATIBILITY.md)
+[![Test Status](https://github.com/gnidan/web-solc/actions/workflows/test.yml/badge.svg)](https://github.com/gnidan/web-solc/actions/workflows/test.yml)
 
 The `web-solc` package allows you to run specific versions of the Solidity
 compiler (solc) in the browser using web workers. It supports arbitrary
@@ -107,6 +110,40 @@ To use these packages in your project, you can install them via npm:
 ```console
 npm install --save web-solc @web-solc/react
 ```
+
+## Solidity Version Compatibility
+
+web-solc supports a wide range of Solidity compiler versions. For detailed compatibility information, see the [compatibility report](./COMPATIBILITY.md).
+
+### Quick Compatibility Summary:
+
+- **Browser Support**: 0.4.26+ (with gaps in 0.4.x and 0.5.x ranges)
+- **Node.js Support**: 0.4.16+
+- **Not supported**: < 0.4.16 (limited Standard JSON support)
+
+### Testing Compatibility
+
+To test specific Solidity versions locally:
+
+```bash
+# Download all compiler versions
+yarn test:compat:download
+
+# Run integration tests (tests representative versions by default)
+cd packages/web-solc && yarn test:integration
+
+# Run ALL version tests (takes longer)
+yarn test:compat
+
+# Generate compatibility report
+yarn test:compat:report
+
+# Commit the updated files
+git add COMPATIBILITY.md *-badge.json
+git commit -m "Update compatibility report and badges"
+```
+
+**Note**: The compatibility report and badges are tracked in git. When making changes that affect compatibility, please regenerate and commit these files. CI will validate they're up-to-date.
 
 ## Contributing
 

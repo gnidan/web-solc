@@ -78,7 +78,9 @@ describe("browser", () => {
 
       expect(
         common.fetchLatestReleasedSoljsonSatisfyingVersionRange
-      ).toHaveBeenCalledWith("^0.8.0", options);
+      ).toHaveBeenCalledWith("^0.8.0", {
+        repository: { baseUrl: "https://custom.url" },
+      });
     });
 
     it("should handle compile request through worker", async () => {
@@ -113,8 +115,9 @@ describe("browser", () => {
 
       // Verify postMessage was called with correct data
       expect(mockWorker.postMessage).toHaveBeenCalledWith({
-        soljsonText: mockSoljsonText,
+        soljsonUrl: "blob:mock-url",
         input,
+        disabledInterfaces: [],
       });
 
       // Simulate worker response
@@ -247,23 +250,24 @@ describe("browser", () => {
 
       // Verify postMessage was called with correct data
       expect(mockWorker.postMessage).toHaveBeenCalledWith({
-        soljsonText: mockSoljsonText,
+        soljsonUrl: "blob:mock-url",
         input,
+        disabledInterfaces: [],
       });
 
       // Simulate worker response
-      const mockOutput = {
+      const mockOutput = JSON.stringify({
         contracts: { "test.sol": {} },
         sources: {},
         errors: [],
-      };
+      });
 
       if (mockWorker.onmessage) {
         mockWorker.onmessage({ data: mockOutput } as MessageEvent);
       }
 
       const result = await compilePromise;
-      expect(result).toEqual(mockOutput);
+      expect(result).toBe(mockOutput);
     });
   });
 });

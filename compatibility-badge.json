@@ -1,0 +1,6 @@
+{
+  "schemaVersion": 1,
+  "label": "solidity",
+  "message": "browser: 0.4.26+ | node: 0.4.16+",
+  "color": "brightgreen"
+}

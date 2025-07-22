@@ -18,7 +18,7 @@ describe("WebSolcProvider", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedWebSolc.fetchSolc.mockResolvedValue(mockSolc);
+    mockedWebSolc.fetchAndLoadSolc.mockResolvedValue(mockSolc);
   });
 
   afterEach(() => {
@@ -35,7 +35,7 @@ describe("WebSolcProvider", () => {
     expect(getByText("Test Child")).toBeDefined();
   });
 
-  it("should pass options to fetchSolc", async () => {
+  it("should pass options to fetchAndLoadSolc", async () => {
     const options = { repository: { baseUrl: "https://custom.url" } };
 
     const { result } = renderHook(() => useWebSolc("^0.8.0"), {
@@ -48,7 +48,9 @@ describe("WebSolcProvider", () => {
       expect(result.current).toBeDefined();
     });
 
-    expect(mockedWebSolc.fetchSolc).toHaveBeenCalledWith("^0.8.0", options);
+    expect(mockedWebSolc.fetchAndLoadSolc).toHaveBeenCalledWith("^0.8.0", {
+      fetch: options,
+    });
   });
 
   it("should cleanup workers on unmount", async () => {
@@ -81,7 +83,7 @@ describe("WebSolcProvider", () => {
     });
 
     // First fetch
-    expect(mockedWebSolc.fetchSolc).toHaveBeenCalledTimes(1);
+    expect(mockedWebSolc.fetchAndLoadSolc).toHaveBeenCalledTimes(1);
 
     // Use same version again
     rerender({ version: "^0.8.0" });
@@ -91,7 +93,7 @@ describe("WebSolcProvider", () => {
     });
 
     // Should not fetch again
-    expect(mockedWebSolc.fetchSolc).toHaveBeenCalledTimes(1);
+    expect(mockedWebSolc.fetchAndLoadSolc).toHaveBeenCalledTimes(1);
 
     // Use different version
     rerender({ version: "^0.7.0" });
@@ -101,8 +103,10 @@ describe("WebSolcProvider", () => {
     });
 
     // Should fetch the new version
-    expect(mockedWebSolc.fetchSolc).toHaveBeenCalledTimes(2);
-    expect(mockedWebSolc.fetchSolc).toHaveBeenLastCalledWith("^0.7.0", {});
+    expect(mockedWebSolc.fetchAndLoadSolc).toHaveBeenCalledTimes(2);
+    expect(mockedWebSolc.fetchAndLoadSolc).toHaveBeenLastCalledWith("^0.7.0", {
+      fetch: {},
+    });
   });
 });
 
@@ -116,7 +120,7 @@ describe("useWebSolc", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockedWebSolc.fetchSolc.mockResolvedValue(mockSolc);
+    mockedWebSolc.fetchAndLoadSolc.mockResolvedValue(mockSolc);
   });
 
   afterEach(() => {
@@ -185,7 +189,9 @@ describe("useWebSolc", () => {
   it("should throw error if compile is called before compiler is ready", async () => {
     // Create a promise that never resolves
     const neverResolve = new Promise(() => {});
-    mockedWebSolc.fetchSolc.mockReturnValue(neverResolve as Promise<WebSolc>);
+    mockedWebSolc.fetchAndLoadSolc.mockReturnValue(
+      neverResolve as Promise<WebSolc>
+    );
 
     const { result } = renderHook(() => useWebSolc("^0.8.0"), {
       wrapper: ({ children }) => <WebSolcProvider>{children}</WebSolcProvider>,
@@ -228,7 +234,9 @@ describe("useWebSolc", () => {
       expect(result.current).toBeDefined();
     });
 
-    expect(mockedWebSolc.fetchSolc).toHaveBeenCalledWith("^0.8.0", {});
+    expect(mockedWebSolc.fetchAndLoadSolc).toHaveBeenCalledWith("^0.8.0", {
+      fetch: {},
+    });
 
     // Change version
     rerender({ version: "^0.7.0" });
@@ -237,7 +245,9 @@ describe("useWebSolc", () => {
       expect(result.current).toBeDefined();
     });
 
-    expect(mockedWebSolc.fetchSolc).toHaveBeenCalledWith("^0.7.0", {});
+    expect(mockedWebSolc.fetchAndLoadSolc).toHaveBeenCalledWith("^0.7.0", {
+      fetch: {},
+    });
   });
 
   it("should cleanup on unmount", async () => {

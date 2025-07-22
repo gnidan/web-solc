@@ -1,24 +1,43 @@
 import { fetchLatestReleasedSoljsonSatisfyingVersionRange } from "./common.js";
 
-import type { FetchSolcOptions, WebSolc } from "./interface.js";
+import type {
+  FetchAndLoadOptions,
+  WebSolc,
+  LoadOptions,
+  FetchSolcOptions,
+} from "./interface.js";
 import solcWorker from "./solc.worker.js";
 
 export * from "./interface.js";
 
+export async function fetchAndLoadSolc(
+  versionRange: string,
+  options?: FetchAndLoadOptions
+): Promise<WebSolc> {
+  const soljsonText = await fetchLatestReleasedSoljsonSatisfyingVersionRange(
+    versionRange,
+    options?.fetch
+  );
+
+  return loadSolc(soljsonText, options?.load);
+}
+
+/** @deprecated Use fetchAndLoadSolc instead */
 export async function fetchSolc(
   versionRange: string,
   options?: FetchSolcOptions
 ): Promise<WebSolc> {
-  const soljsonText = await fetchLatestReleasedSoljsonSatisfyingVersionRange(
-    versionRange,
-    options
-  );
-
-  return loadSolc(soljsonText);
+  return fetchAndLoadSolc(versionRange, { fetch: options });
 }
 
-export function loadSolc(soljsonText: string): WebSolc {
+export function loadSolc(soljsonText: string, options?: LoadOptions): WebSolc {
   const { worker, stopWorker } = startWorker();
+
+  // Create a blob URL for the soljson
+  const soljsonBlob = new Blob([soljsonText], {
+    type: "application/javascript",
+  });
+  const soljsonUrl = URL.createObjectURL(soljsonBlob);
 
   return {
     compile(input) {
@@ -33,11 +52,19 @@ export function loadSolc(soljsonText: string): WebSolc {
 
         worker.onerror = reject;
 
-        worker.postMessage({ soljsonText, input });
+        worker.postMessage({
+          soljsonUrl,
+          input,
+          disabledInterfaces:
+            options?.compatibility?.disableCompilerInterfaces || [],
+        });
       });
     },
 
-    stopWorker,
+    stopWorker: () => {
+      stopWorker();
+      URL.revokeObjectURL(soljsonUrl);
+    },
   };
 }
 
