@@ -113,7 +113,7 @@ describe("browser", () => {
 
       // Verify postMessage was called with correct data
       expect(mockWorker.postMessage).toHaveBeenCalledWith({
-        soljsonText: mockSoljsonText,
+        soljsonUrl: "blob:mock-url",
         input,
       });
 
@@ -247,23 +247,23 @@ describe("browser", () => {
 
       // Verify postMessage was called with correct data
       expect(mockWorker.postMessage).toHaveBeenCalledWith({
-        soljsonText: mockSoljsonText,
+        soljsonUrl: "blob:mock-url",
         input,
       });
 
       // Simulate worker response
-      const mockOutput = {
+      const mockOutput = JSON.stringify({
         contracts: { "test.sol": {} },
         sources: {},
         errors: [],
-      };
+      });
 
       if (mockWorker.onmessage) {
         mockWorker.onmessage({ data: mockOutput } as MessageEvent);
       }
 
       const result = await compilePromise;
-      expect(result).toEqual(mockOutput);
+      expect(result).toBe(mockOutput);
     });
   });
 });

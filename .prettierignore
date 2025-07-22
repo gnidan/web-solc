@@ -11,3 +11,6 @@ pnpm-lock.yaml
 .next
 .cache
 public
+
+# Ignore soljson files as they should not be formatted
+**/soljson-*.js

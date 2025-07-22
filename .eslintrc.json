@@ -53,9 +53,10 @@
     "build",
     "coverage",
     "*.d.ts",
-    "bin",
+    "bin/start",
     "packages/example",
     "**/soljson-*.js",
-    "packages/web-solc/tests/fixtures"
+    "packages/web-solc/tests/fixtures",
+    "packages/web-solc/vendor"
   ]
 }
