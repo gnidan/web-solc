@@ -1,30 +1,81 @@
-# React + TypeScript + Vite
+# web-solc Example
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This example demonstrates how to use web-solc with React and Vite, showcasing both the primary `loadSolc` pattern and the convenience CDN fetching pattern.
 
-Currently, two official plugins are available:
+## Features Demonstrated
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **Primary pattern**: Loading compilers from your own source
+- **Convenience pattern**: Auto-fetching from CDN
+- **Loading states**: Proper handling of loading and error states
+- **Compilation**: Basic Solidity compilation with output display
 
-## Expanding the ESLint configuration
+## Running the Example
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+From the repository root:
 
-- Configure the top-level `parserOptions` property like this:
+```bash
+# Install dependencies and build packages
+yarn install
 
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: "latest",
-    sourceType: "module",
-    project: ["./tsconfig.json", "./tsconfig.node.json"],
-    tsconfigRootDir: __dirname,
-  },
-};
+# Run all packages in development mode
+yarn start
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+Or run just the example:
+
+```bash
+cd packages/example
+yarn dev
+```
+
+Then open http://localhost:5173 in your browser.
+
+## Key Code Patterns
+
+### Primary Pattern: Using Your Own Compiler Source
+
+```tsx
+// Fetch compiler from your source
+const response = await fetch("/compilers/solc-0.8.26.js");
+const soljson = await response.text();
+
+// Use with the hook
+const compiler = useWebSolc({ soljson });
+```
+
+### Convenience Pattern: Auto-fetch from CDN
+
+```tsx
+// Quick start - automatically fetches from official CDN
+const compiler = useWebSolc({ version: "^0.8.0" });
+```
+
+### Complete Example
+
+See [`src/App.tsx`](./src/App.tsx) for the full implementation showing:
+
+- How to structure your React components
+- Proper loading and error handling
+- Compilation with the Standard JSON format
+- Displaying compilation results
+
+## Learn More
+
+- [web-solc documentation](../../README.md) - Core library documentation
+- [@web-solc/react documentation](../react/README.md) - React bindings documentation
+- [Solidity Compiler JSON I/O](https://docs.soliditylang.org/en/latest/using-the-compiler.html#compiler-input-and-output-json-description) - Compiler input/output format
+
+## Building for Production
+
+This example uses Vite for development and production builds:
+
+```bash
+# Development mode with hot reload
+yarn dev
+
+# Production build
+yarn build
+
+# Preview production build
+yarn preview
+```

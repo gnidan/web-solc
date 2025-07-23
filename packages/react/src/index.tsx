@@ -4,56 +4,78 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
 import {
-  fetchAndLoadSolc,
+  fetchSolc,
+  loadSolc,
+  resolveSolc,
   type WebSolc,
   type FetchOptions,
+  type LoadOptions,
   type CompilerInput,
   type CompilerOutput,
 } from "web-solc";
 
-export type WebSolcProviderProps = FetchOptions;
+// Cache interface for pluggable caching strategies - stores soljson strings
+export interface SoljsonCache {
+  get(version: string): Promise<string | undefined>;
+  set(version: string, soljson: string): Promise<void>;
+  clear(): Promise<void>;
+}
+
+// Default in-memory cache implementation
+export class MemoryCache implements SoljsonCache {
+  private cache = new Map<string, string>();
+
+  async get(version: string): Promise<string | undefined> {
+    return this.cache.get(version);
+  }
+
+  async set(version: string, soljson: string): Promise<void> {
+    this.cache.set(version, soljson);
+  }
+
+  async clear(): Promise<void> {
+    this.cache.clear();
+  }
+}
+
+// Context type
+interface WebSolcContextValue {
+  cache: SoljsonCache;
+  fetchOptions?: FetchOptions;
+  loadOptions?: LoadOptions;
+}
+
+const WebSolcContext = createContext<WebSolcContextValue | null>(null);
+
+// Provider props
+export interface WebSolcProviderProps {
+  cache?: SoljsonCache;
+  fetchOptions?: FetchOptions;
+  loadOptions?: LoadOptions;
+}
 
 /**
- * This component manages a collection of Solidity compiler instances and
- * provides access to the `useWebSolc()` hook to children components.
- *
- * Since web-solc uses Web Workers, this component handles the cleanup of
- * all the web workers on unmount.
+ * Optional provider for managing soljson caching.
+ * If not used, useWebSolc will work without caching.
  */
 export function WebSolcProvider({
   children,
-  ...options
+  cache = new MemoryCache(),
+  fetchOptions,
+  loadOptions,
 }: React.PropsWithChildren<WebSolcProviderProps>): JSX.Element {
-  // State to store compiler instances
-  const [solcs, setSolcs] = useState<{
-    [versionRange: string]: WebSolc;
-  }>({});
-
-  // Cleanup effect to stop all workers when the provider unmounts
-  useEffect(() => {
-    return () => {
-      for (const solc of Object.values(solcs)) {
-        solc.stopWorker();
-      }
-    };
-  }, [solcs]);
-
-  // Memoized function to get or create a compiler instance
   const contextValue = useMemo(
-    () => async (versionRange: string) => {
-      if (versionRange in solcs) {
-        return solcs[versionRange];
-      }
-
-      const solc = await fetchAndLoadSolc(versionRange, { fetch: options });
-      setSolcs((previous) => ({ ...previous, [versionRange]: solc }));
-      return solc;
-    },
-    [solcs, options]
+    () => ({
+      cache,
+      fetchOptions,
+      loadOptions,
+    }),
+    [cache, fetchOptions, loadOptions]
   );
 
   return (
@@ -63,53 +85,171 @@ export function WebSolcProvider({
   );
 }
 
+// Hook options
+export interface UseWebSolcOptions {
+  version?: string; // Version range (will be resolved to exact version)
+  soljson?: string; // Direct soljson string
+  fetchOptions?: FetchOptions;
+  loadOptions?: LoadOptions;
+}
+
+// Hook result
+export type UseWebSolcResult =
+  | { loading: true; error?: never; compile?: never }
+  | { loading: false; error: Error; compile?: never }
+  | {
+      loading: false;
+      error?: never;
+      compile: (input: CompilerInput) => Promise<CompilerOutput>;
+    };
+
 /**
- * Custom hook to use the Solidity compiler
- * @param versionRange - The version range of the Solidity compiler to use
- * @returns An object with a compile function, or undefined if the compiler is not ready
+ * Hook to use Solidity compiler. Works with or without WebSolcProvider.
  */
-export function useWebSolc(
-  versionRange: string
-): Omit<WebSolc, "stopWorker"> | undefined {
-  const getSolc = useContext(WebSolcContext);
-  if (!getSolc) {
-    throw new Error("useWebSolc() must be used inside a <WebSolcProvider>");
-  }
+export function useWebSolc(options: UseWebSolcOptions): UseWebSolcResult {
+  const context = useContext(WebSolcContext);
 
-  const [solc, setSolc] = useState<WebSolc | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+  const [compiler, setCompiler] = useState<WebSolc | null>(null);
 
-  // Effect to fetch and set the compiler instance
+  // Track compiler for cleanup
+  const compilerRef = useRef<WebSolc | null>(null);
+
+  // Stable options ref
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
   useEffect(() => {
-    let isMounted = true;
+    let cancelled = false;
+    let localCompiler: WebSolc | null = null;
 
-    getSolc(versionRange).then((solc) => {
-      if (isMounted) {
-        setSolc(solc);
+    async function loadCompiler() {
+      const currentOptions = optionsRef.current;
+
+      try {
+        setLoading(true);
+        setError(null);
+
+        let soljson: string;
+
+        if (currentOptions.soljson) {
+          // Direct soljson provided
+          soljson = currentOptions.soljson;
+        } else if (currentOptions.version) {
+          // Resolve version range to exact version
+          const { version: exactVersion } = await resolveSolc(
+            currentOptions.version,
+            currentOptions.fetchOptions ?? context?.fetchOptions
+          );
+
+          if (cancelled) return;
+
+          // Try cache first if available
+          if (context?.cache) {
+            const cached = await context.cache.get(exactVersion);
+            if (cached) {
+              soljson = cached;
+            } else {
+              // Not in cache, fetch it
+              soljson = await fetchSolc(
+                exactVersion,
+                currentOptions.fetchOptions ?? context?.fetchOptions
+              );
+
+              if (cancelled) return;
+
+              // Store in cache for next time
+              await context.cache.set(exactVersion, soljson);
+            }
+          } else {
+            // No cache, just fetch
+            soljson = await fetchSolc(
+              exactVersion,
+              currentOptions.fetchOptions ?? context?.fetchOptions
+            );
+          }
+
+          if (cancelled) return;
+        } else {
+          throw new Error("Either version or soljson must be provided");
+        }
+
+        // Load the compiler from soljson
+        localCompiler = await loadSolc(
+          soljson,
+          currentOptions.loadOptions ?? context?.loadOptions
+        );
+
+        if (cancelled) {
+          localCompiler.stopWorker();
+          return;
+        }
+
+        setCompiler(localCompiler);
+        compilerRef.current = localCompiler;
+        setLoading(false);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err : new Error(String(err)));
+          setLoading(false);
+          setCompiler(null);
+          compilerRef.current = null;
+        }
+        // Clean up local compiler if error occurred
+        if (localCompiler) {
+          localCompiler.stopWorker();
+        }
       }
-    });
+    }
+
+    loadCompiler();
 
     return () => {
-      isMounted = false;
+      cancelled = true;
+
+      // Always clean up our compiler instance
+      if (compilerRef.current) {
+        compilerRef.current.stopWorker();
+        compilerRef.current = null;
+      }
     };
-  }, [getSolc, versionRange]);
+  }, [
+    options.version,
+    options.soljson,
+    options.fetchOptions,
+    options.loadOptions,
+    context,
+  ]);
 
   // Memoized compile function
   const compile = useCallback(
     async (input: CompilerInput): Promise<CompilerOutput> => {
-      if (!solc) {
+      if (!compiler) {
         throw new Error("Compiler not ready");
       }
-      return solc.compile(input);
+      return compiler.compile(input);
     },
-    [solc]
+    [compiler]
   );
 
-  // Return the compile function if the compiler is ready, otherwise undefined
-  return solc ? { compile } : undefined;
+  // Return appropriate result
+  if (loading) {
+    return { loading: true };
+  }
+
+  if (error) {
+    return { loading: false, error };
+  }
+
+  return { loading: false, compile };
 }
 
-// Type for the getSolc function
-type GetSolc = (versionRange: string) => Promise<WebSolc>;
-
-// Create context with null as default value
-const WebSolcContext = createContext<GetSolc | null>(null);
+// Re-export types from web-solc for convenience
+export type {
+  WebSolc,
+  CompilerInput,
+  CompilerOutput,
+  FetchOptions,
+  LoadOptions,
+} from "web-solc";

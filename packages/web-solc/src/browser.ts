@@ -1,40 +1,30 @@
-import { fetchLatestReleasedSoljsonSatisfyingVersionRange } from "./common.js";
+import { fetchSolc } from "./common.js";
 
-import type {
-  FetchAndLoadOptions,
-  WebSolc,
-  LoadOptions,
-  FetchSolcOptions,
-} from "./interface.js";
+import type { FetchAndLoadOptions, WebSolc, LoadOptions } from "./interface.js";
 import solcWorker from "./solc.worker.js";
 
 export * from "./interface.js";
+
+export { fetchSolc, resolveSolc } from "./common.js";
 
 export async function fetchAndLoadSolc(
   versionRange: string,
   options?: FetchAndLoadOptions
 ): Promise<WebSolc> {
-  const soljsonText = await fetchLatestReleasedSoljsonSatisfyingVersionRange(
-    versionRange,
-    options?.fetch
-  );
-
-  return loadSolc(soljsonText, options?.load);
+  const soljson = options?.fetch
+    ? await fetchSolc(versionRange, options.fetch)
+    : await fetchSolc(versionRange);
+  return loadSolc(soljson, options?.load);
 }
 
-/** @deprecated Use fetchAndLoadSolc instead */
-export async function fetchSolc(
-  versionRange: string,
-  options?: FetchSolcOptions
+export async function loadSolc(
+  soljson: string,
+  options?: LoadOptions
 ): Promise<WebSolc> {
-  return fetchAndLoadSolc(versionRange, { fetch: options });
-}
-
-export function loadSolc(soljsonText: string, options?: LoadOptions): WebSolc {
   const { worker, stopWorker } = startWorker();
 
   // Create a blob URL for the soljson
-  const soljsonBlob = new Blob([soljsonText], {
+  const soljsonBlob = new Blob([soljson], {
     type: "application/javascript",
   });
   const soljsonUrl = URL.createObjectURL(soljsonBlob);

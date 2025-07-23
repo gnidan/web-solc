@@ -176,14 +176,14 @@ export function verifyCompilationOutput(
 // Browser-specific test runner factory
 export function createBrowserTestRunner(testName: string, testCase: TestCase) {
   return `
-    window.${testName} = async (soljsonText) => {
+    window.${testName} = async (soljson) => {
+      let solc = null;
       try {
-        const solc = window.loadSolc(soljsonText);
+        solc = await window.loadSolc(soljson);
 
         const input = ${JSON.stringify(createCompileInput(testCase))};
 
         const output = await solc.compile(input);
-        solc.stopWorker();
 
         // Check if this is an error test case
         if (${!!testCase.assertions.find((a) => a.path === "errors")}) {
@@ -209,6 +209,15 @@ export function createBrowserTestRunner(testName: string, testCase: TestCase) {
           success: false,
           error: error.message || String(error)
         };
+      } finally {
+        // Ensure worker is always stopped, even on error
+        if (solc && typeof solc.stopWorker === 'function') {
+          try {
+            solc.stopWorker();
+          } catch (cleanupError) {
+            console.warn('Error stopping worker:', cleanupError);
+          }
+        }
       }
     };
   `;

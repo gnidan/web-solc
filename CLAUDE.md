@@ -119,6 +119,23 @@ The repository includes a comprehensive compatibility testing system:
 - Separate test environments to capture browser vs Node.js differences
 - Compatibility tests for all stable Solidity versions (0.4.11+)
 
+## Recent API Changes
+
+### web-solc (core package)
+
+- **Renamed**: `soljsonText` parameter renamed to `soljson` throughout the API
+- **New function**: `resolveSolc(versionRange)` - resolves version ranges to exact versions without downloading
+- **Updated**: `fetchSolc` now uses `resolveSolc` internally for consistent version resolution
+
+### @web-solc/react
+
+- **Redesigned**: `useWebSolc` hook now works standalone without requiring `WebSolcProvider`
+- **Cache changes**: Cache now stores soljson strings instead of WebSolc instances
+  - Interface renamed from `CompilerCache` to `SoljsonCache`
+  - Simpler implementation for third-party caching strategies
+  - Hook handles all compiler lifecycle internally
+- **Provider optional**: `WebSolcProvider` is now optional and primarily for caching across components
+
 ## Architecture
 
 ### Core Design Principles

@@ -1,17 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchSolc } from "./browser.js";
+import { fetchAndLoadSolc, fetchSolc } from "./browser.js";
 import * as common from "./common.js";
 
 // Mock the common module
 vi.mock("./common.js", () => ({
-  fetchLatestReleasedSoljsonSatisfyingVersionRange: vi.fn(),
+  fetchSolc: vi.fn(),
 }));
 
 // Mock the worker module
 vi.mock("./solc.worker.js", () => ({
   default: () => {
     self.onmessage = (_event: MessageEvent) => {
-      // const { soljsonText, input } = event.data;
       // Simulate compiler output
       self.postMessage(
         JSON.stringify({
@@ -32,12 +31,10 @@ describe("browser", () => {
     global.URL.revokeObjectURL = vi.fn();
   });
 
-  describe("fetchSolc", () => {
+  describe("fetchAndLoadSolc", () => {
     it("should create a WebSolc instance with compile and stopWorker methods", async () => {
-      const mockSoljsonText = "mock solc compiler code";
-      vi.mocked(
-        common.fetchLatestReleasedSoljsonSatisfyingVersionRange
-      ).mockResolvedValue(mockSoljsonText);
+      const mockSoljson = "mock solc compiler code";
+      vi.mocked(common).fetchSolc.mockResolvedValue(mockSoljson);
 
       // Mock Worker
       const mockWorker = {
@@ -51,22 +48,18 @@ describe("browser", () => {
         .fn()
         .mockImplementation(() => mockWorker) as unknown as typeof Worker;
 
-      const solc = await fetchSolc("^0.8.0");
+      const solc = await fetchAndLoadSolc("^0.8.0");
 
-      expect(
-        common.fetchLatestReleasedSoljsonSatisfyingVersionRange
-      ).toHaveBeenCalledWith("^0.8.0", undefined);
+      expect(common.fetchSolc).toHaveBeenCalledWith("^0.8.0");
       expect(global.URL.createObjectURL).toHaveBeenCalled();
       expect(global.Worker).toHaveBeenCalledWith("blob:mock-url");
       expect(solc).toHaveProperty("compile");
       expect(solc).toHaveProperty("stopWorker");
     });
 
-    it("should pass options to fetchLatestReleasedSoljsonSatisfyingVersionRange", async () => {
-      const mockSoljsonText = "mock solc compiler code";
-      vi.mocked(
-        common.fetchLatestReleasedSoljsonSatisfyingVersionRange
-      ).mockResolvedValue(mockSoljsonText);
+    it("should pass options to fetchSolc", async () => {
+      const mockSoljson = "mock solc compiler code";
+      vi.mocked(common).fetchSolc.mockResolvedValue(mockSoljson);
 
       global.Worker = vi.fn().mockImplementation(() => ({
         postMessage: vi.fn(),
@@ -74,20 +67,14 @@ describe("browser", () => {
       })) as unknown as typeof Worker;
 
       const options = { repository: { baseUrl: "https://custom.url" } };
-      await fetchSolc("^0.8.0", options);
+      await fetchAndLoadSolc("^0.8.0", { fetch: options });
 
-      expect(
-        common.fetchLatestReleasedSoljsonSatisfyingVersionRange
-      ).toHaveBeenCalledWith("^0.8.0", {
-        repository: { baseUrl: "https://custom.url" },
-      });
+      expect(common.fetchSolc).toHaveBeenCalledWith("^0.8.0", options);
     });
 
     it("should handle compile request through worker", async () => {
-      const mockSoljsonText = "mock solc compiler code";
-      vi.mocked(
-        common.fetchLatestReleasedSoljsonSatisfyingVersionRange
-      ).mockResolvedValue(mockSoljsonText);
+      const mockSoljson = "mock solc compiler code";
+      vi.mocked(common).fetchSolc.mockResolvedValue(mockSoljson);
 
       const mockWorker = {
         postMessage: vi.fn(),
@@ -100,7 +87,7 @@ describe("browser", () => {
         .fn()
         .mockImplementation(() => mockWorker) as unknown as typeof Worker;
 
-      const solc = await fetchSolc("^0.8.0");
+      const solc = await fetchAndLoadSolc("^0.8.0");
 
       const input = {
         language: "Solidity",
@@ -136,10 +123,8 @@ describe("browser", () => {
     });
 
     it("should handle worker errors", async () => {
-      const mockSoljsonText = "mock solc compiler code";
-      vi.mocked(
-        common.fetchLatestReleasedSoljsonSatisfyingVersionRange
-      ).mockResolvedValue(mockSoljsonText);
+      const mockSoljson = "mock solc compiler code";
+      vi.mocked(common).fetchSolc.mockResolvedValue(mockSoljson);
 
       const mockWorker = {
         postMessage: vi.fn(),
@@ -152,7 +137,7 @@ describe("browser", () => {
         .fn()
         .mockImplementation(() => mockWorker) as unknown as typeof Worker;
 
-      const solc = await fetchSolc("^0.8.0");
+      const solc = await fetchAndLoadSolc("^0.8.0");
 
       // Start the compile
       const input = { language: "Solidity", sources: {} };
@@ -168,10 +153,8 @@ describe("browser", () => {
     });
 
     it("should cleanup worker and blob URL on stopWorker", async () => {
-      const mockSoljsonText = "mock solc compiler code";
-      vi.mocked(
-        common.fetchLatestReleasedSoljsonSatisfyingVersionRange
-      ).mockResolvedValue(mockSoljsonText);
+      const mockSoljson = "mock solc compiler code";
+      vi.mocked(common).fetchSolc.mockResolvedValue(mockSoljson);
 
       const mockWorker = {
         postMessage: vi.fn(),
@@ -184,7 +167,7 @@ describe("browser", () => {
         .fn()
         .mockImplementation(() => mockWorker) as unknown as typeof Worker;
 
-      const solc = await fetchSolc("^0.8.0");
+      const solc = await fetchAndLoadSolc("^0.8.0");
 
       solc.stopWorker();
 
@@ -193,9 +176,32 @@ describe("browser", () => {
     });
   });
 
+  describe("fetchSolc", () => {
+    it("should return soljson string", async () => {
+      const mockSoljson = "mock soljson";
+      vi.mocked(common).fetchSolc.mockResolvedValue(mockSoljson);
+
+      const result = await fetchSolc("^0.8.0");
+
+      expect(result).toBe(mockSoljson);
+      expect(common.fetchSolc).toHaveBeenCalledWith("^0.8.0");
+    });
+
+    it("should pass options correctly", async () => {
+      const mockSoljson = "mock soljson";
+      const options = { repository: { baseUrl: "https://custom.url" } };
+      vi.mocked(common).fetchSolc.mockResolvedValue(mockSoljson);
+
+      const result = await fetchSolc("^0.8.0", options);
+
+      expect(result).toBe(mockSoljson);
+      expect(common.fetchSolc).toHaveBeenCalledWith("^0.8.0", options);
+    });
+  });
+
   describe("loadSolc", () => {
-    it("should create a WebSolc instance from provided soljson text", async () => {
-      const mockSoljsonText = "mock solc compiler code";
+    it("should create a WebSolc instance from provided soljson", async () => {
+      const mockSoljson = "mock solc compiler code";
 
       // Mock Worker
       const mockWorker = {
@@ -212,7 +218,7 @@ describe("browser", () => {
       global.URL.revokeObjectURL = vi.fn();
 
       const { loadSolc } = await import("./browser.js");
-      const solc = loadSolc(mockSoljsonText);
+      const solc = await loadSolc(mockSoljson);
 
       expect(global.URL.createObjectURL).toHaveBeenCalled();
       expect(global.Worker).toHaveBeenCalledWith("blob:mock-url");
@@ -221,7 +227,7 @@ describe("browser", () => {
     });
 
     it("should compile using provided soljson", async () => {
-      const mockSoljsonText = "mock solc compiler code";
+      const mockSoljson = "mock solc compiler code";
 
       const mockWorker = {
         postMessage: vi.fn(),
@@ -235,7 +241,7 @@ describe("browser", () => {
         .mockImplementation(() => mockWorker) as unknown as typeof Worker;
 
       const { loadSolc } = await import("./browser.js");
-      const solc = loadSolc(mockSoljsonText);
+      const solc = await loadSolc(mockSoljson);
 
       const input = {
         language: "Solidity",
@@ -268,6 +274,37 @@ describe("browser", () => {
 
       const result = await compilePromise;
       expect(result).toBe(mockOutput);
+    });
+
+    it("should pass compatibility options to worker", async () => {
+      const mockSoljson = "mock solc compiler code";
+
+      const mockWorker = {
+        postMessage: vi.fn(),
+        terminate: vi.fn(),
+        onmessage: null as ((event: MessageEvent) => void) | null,
+        onerror: null as ((error: ErrorEvent) => void) | null,
+      };
+
+      global.Worker = vi
+        .fn()
+        .mockImplementation(() => mockWorker) as unknown as typeof Worker;
+
+      const { loadSolc } = await import("./browser.js");
+      const solc = await loadSolc(mockSoljson, {
+        compatibility: {
+          disableCompilerInterfaces: ["legacy"],
+        },
+      });
+
+      const input = { language: "Solidity", sources: {} };
+      solc.compile(input);
+
+      expect(mockWorker.postMessage).toHaveBeenCalledWith({
+        soljsonUrl: "blob:mock-url",
+        input,
+        disabledInterfaces: ["legacy"],
+      });
     });
   });
 });
