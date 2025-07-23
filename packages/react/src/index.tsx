@@ -85,6 +85,31 @@ export function WebSolcProvider({
   );
 }
 
+// Helper function to fetch soljson with optional cache support
+async function fetchSoljsonWithCache(
+  version: string,
+  cache: SoljsonCache | undefined,
+  fetchOptions: FetchOptions | undefined
+): Promise<string> {
+  if (cache) {
+    // Try cache first
+    const cached = await cache.get(version);
+    if (cached) {
+      return cached;
+    }
+
+    // Not in cache, fetch it
+    const soljson = await fetchSolc(version, fetchOptions);
+
+    // Store in cache for next time
+    await cache.set(version, soljson);
+    return soljson;
+  } else {
+    // No cache, just fetch
+    return fetchSolc(version, fetchOptions);
+  }
+}
+
 // Hook options
 export interface UseWebSolcOptions {
   version?: string; // Version range (will be resolved to exact version)
@@ -145,30 +170,12 @@ export function useWebSolc(options: UseWebSolcOptions): UseWebSolcResult {
 
           if (cancelled) return;
 
-          // Try cache first if available
-          if (context?.cache) {
-            const cached = await context.cache.get(exactVersion);
-            if (cached) {
-              soljson = cached;
-            } else {
-              // Not in cache, fetch it
-              soljson = await fetchSolc(
-                exactVersion,
-                currentOptions.fetchOptions ?? context?.fetchOptions
-              );
-
-              if (cancelled) return;
-
-              // Store in cache for next time
-              await context.cache.set(exactVersion, soljson);
-            }
-          } else {
-            // No cache, just fetch
-            soljson = await fetchSolc(
-              exactVersion,
-              currentOptions.fetchOptions ?? context?.fetchOptions
-            );
-          }
+          // Fetch from cache or network
+          soljson = await fetchSoljsonWithCache(
+            exactVersion,
+            context?.cache,
+            currentOptions.fetchOptions ?? context?.fetchOptions
+          );
 
           if (cancelled) return;
         } else {
