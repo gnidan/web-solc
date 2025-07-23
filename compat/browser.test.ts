@@ -80,9 +80,9 @@ describe("Browser Integration Tests", () => {
         );
 
         // Check if soljson file exists
-        let soljsonText: string;
+        let soljson: string;
         try {
-          soljsonText = readFileSync(soljsonPath, "utf-8");
+          soljson = readFileSync(soljsonPath, "utf-8");
         } catch {
           throw new Error(
             `Solidity compiler v${testCase.version} not found at ${soljsonPath}.\n` +
@@ -118,7 +118,7 @@ describe("Browser Integration Tests", () => {
             // @ts-expect-error dynamically created function
             return await window[testName](soljsonContent);
           },
-          { testName, soljsonContent: soljsonText }
+          { testName, soljsonContent: soljson }
         );
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -153,9 +153,9 @@ describe("Browser Integration Tests", () => {
     );
 
     // Check if soljson file exists
-    let soljsonText: string;
+    let soljson: string;
     try {
-      soljsonText = readFileSync(soljsonPath, "utf-8");
+      soljson = readFileSync(soljsonPath, "utf-8");
     } catch {
       throw new Error(
         `Solidity compiler v${errorTestCase.version} not found at ${soljsonPath}.\n` +
@@ -187,7 +187,7 @@ describe("Browser Integration Tests", () => {
         // @ts-expect-error dynamically created function
         return await window[testName](soljsonContent);
       },
-      { testName, soljsonContent: soljsonText }
+      { testName, soljsonContent: soljson }
     );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

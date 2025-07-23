@@ -6,10 +6,11 @@ import {
   type RepositoryOptions,
 } from "./interface.js";
 
-export async function fetchLatestReleasedSoljsonSatisfyingVersionRange(
+export async function resolveSolc(
   versionRange: string,
-  { repository = {} }: FetchOptions = {}
-): Promise<string> {
+  options: FetchOptions = {}
+): Promise<{ version: string; path: string }> {
+  const { repository = {} } = options;
   const { builds } = await fetchBinList(repository);
   const compatibleBuilds = builds.filter(({ longVersion }) =>
     semver.satisfies(longVersion, versionRange)
@@ -23,12 +24,24 @@ export async function fetchLatestReleasedSoljsonSatisfyingVersionRange(
     );
   }
 
-  const soljsonText = await fetchSoljson(
-    latestCompatibleBuild.path,
-    repository
-  );
+  // Extract just the version number from longVersion (e.g., "0.8.26+commit.abc123" -> "0.8.26")
+  const version = latestCompatibleBuild.longVersion.split("+")[0];
 
-  return soljsonText;
+  return {
+    version,
+    path: latestCompatibleBuild.path,
+  };
+}
+
+export async function fetchSolc(
+  versionRange: string,
+  options: FetchOptions = {}
+): Promise<string> {
+  const { repository = {} } = options;
+  const { path } = await resolveSolc(versionRange, options);
+  const soljson = await fetchSoljson(path, repository);
+
+  return soljson;
 }
 
 interface BinList {

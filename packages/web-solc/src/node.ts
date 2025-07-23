@@ -5,38 +5,28 @@ import type {
   WebSolc,
   LoadOptions,
   CompilerInterface,
-  FetchSolcOptions,
 } from "./interface.js";
 import type { WorkerSolc } from "./solc.worker.js";
-import { fetchLatestReleasedSoljsonSatisfyingVersionRange } from "./common.js";
+import { fetchSolc } from "./common.js";
 
 export * from "./interface.js";
+export { fetchSolc, resolveSolc } from "./common.js";
 
 export async function fetchAndLoadSolc(
   versionRange: string,
   options?: FetchAndLoadOptions
 ): Promise<WebSolc> {
-  const soljsonText = await fetchLatestReleasedSoljsonSatisfyingVersionRange(
-    versionRange,
-    options?.fetch
-  );
-
-  return loadSolc(soljsonText, options?.load);
-}
-
-/** @deprecated Use fetchAndLoadSolc instead */
-export async function fetchSolc(
-  versionRange: string,
-  options?: FetchSolcOptions
-): Promise<WebSolc> {
-  return fetchAndLoadSolc(versionRange, { fetch: options });
+  const soljson = options?.fetch
+    ? await fetchSolc(versionRange, options.fetch)
+    : await fetchSolc(versionRange);
+  return loadSolc(soljson, options?.load);
 }
 
 export async function loadSolc(
-  soljsonText: string,
+  soljson: string,
   options?: LoadOptions
 ): Promise<WebSolc> {
-  const solc = await loadSoljson(soljsonText, options);
+  const solc = await loadSoljson(soljson, options);
 
   return {
     compile(input) {
@@ -50,7 +40,7 @@ export async function loadSolc(
 }
 
 async function loadSoljson(
-  soljsonText: string,
+  soljson: string,
   options?: LoadOptions
 ): Promise<WorkerSolc> {
   // Apply compatibility options
@@ -84,7 +74,7 @@ async function loadSoljson(
     printErr: console.error,
   };
 
-  const soljsonFunction = new Function(...Object.keys(context), soljsonText);
+  const soljsonFunction = new Function(...Object.keys(context), soljson);
   await soljsonFunction(...Object.values(context));
 
   // Wait for the module to be fully initialized

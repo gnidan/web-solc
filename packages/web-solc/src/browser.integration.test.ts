@@ -16,11 +16,12 @@ describe("Browser Integration Tests", () => {
   let serverUrl: string;
 
   beforeAll(async () => {
-    // Start Vite server
+    // Start Vite server with HMR disabled to prevent reload issues
     server = await createServer({
       root: resolve(__dirname, "../tests"),
       server: {
         port: 0, // Use any available port
+        hmr: false, // Disable HMR to prevent unexpected reloads
       },
       resolve: {
         alias: {
@@ -59,6 +60,11 @@ describe("Browser Integration Tests", () => {
     page.on("pageerror", (err) => {
       console.error("Browser error:", err);
     });
+
+    // Handle page crashes
+    page.on("crash", () => {
+      console.error("Page crashed!");
+    });
   }, 30000);
 
   afterAll(async () => {
@@ -79,9 +85,9 @@ describe("Browser Integration Tests", () => {
         );
 
         // Check if soljson file exists
-        let soljsonText: string;
+        let soljson: string;
         try {
-          soljsonText = readFileSync(soljsonPath, "utf-8");
+          soljson = readFileSync(soljsonPath, "utf-8");
         } catch {
           throw new Error(
             `Solidity compiler v${testCase.version} not found at ${soljsonPath}.\n` +
@@ -90,9 +96,14 @@ describe("Browser Integration Tests", () => {
         }
 
         // Navigate to the test page
-        await page.goto(`${serverUrl}/test.html`);
+        await page.goto(`${serverUrl}/test.html`, {
+          waitUntil: "networkidle", // Wait for network to be idle
+        });
 
-        // Wait for loadSolc to be available
+        // Add a small delay to ensure page is fully stable
+        await page.waitForTimeout(100);
+
+        // Wait for loadSolc to be available with explicit timeout
         await page.waitForFunction(
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
           () => typeof (window as any).loadSolc === "function",
@@ -102,23 +113,104 @@ describe("Browser Integration Tests", () => {
         // Create unique test name
         const testName = `test_v${testCase.version.replace(/\./g, "_")}_${testCase.contract.contractName}`;
 
-        // Inject the test runner
-        await page.evaluate(
-          (testCode) => {
-            // eslint-disable-next-line no-eval
-            eval(testCode);
-          },
-          createBrowserTestRunner(testName, testCase)
-        );
+        // Inject the test runner with error handling
+        try {
+          await page.evaluate(
+            (testCode) => {
+              // eslint-disable-next-line no-eval
+              eval(testCode);
+            },
+            createBrowserTestRunner(testName, testCase)
+          );
+        } catch (error) {
+          // If evaluation failed due to navigation, retry once
+          if (error.message?.includes("Execution context was destroyed")) {
+            console.warn(
+              `Retrying test for ${testCase.version} due to context destruction`
+            );
 
-        // Run the test
-        const result = await page.evaluate(
-          async ({ testName, soljsonContent }) => {
-            // @ts-expect-error dynamically created function
-            return await window[testName](soljsonContent);
-          },
-          { testName, soljsonContent: soljsonText }
-        );
+            // Re-navigate and wait
+            await page.goto(`${serverUrl}/test.html`, {
+              waitUntil: "networkidle",
+            });
+            await page.waitForTimeout(200);
+
+            await page.waitForFunction(
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              () => typeof (window as any).loadSolc === "function",
+              { timeout: 10000 }
+            );
+
+            await page.evaluate(
+              (testCode) => {
+                // eslint-disable-next-line no-eval
+                eval(testCode);
+              },
+              createBrowserTestRunner(testName, testCase)
+            );
+          } else {
+            throw error;
+          }
+        }
+
+        // Run the test with retry logic
+        let result;
+        try {
+          result = await page.evaluate(
+            async ({ testName, soljsonContent }) => {
+              // @ts-expect-error dynamically created function
+              return await window[testName](soljsonContent);
+            },
+            { testName, soljsonContent: soljson }
+          );
+        } catch (error) {
+          // If evaluation failed due to navigation, retry once
+          if (error.message?.includes("Execution context was destroyed")) {
+            console.warn(
+              `Retrying execution for ${testCase.version} due to context destruction`
+            );
+
+            // Wait a bit for any pending operations
+            await page.waitForTimeout(500);
+
+            // Check if page is still valid
+            try {
+              await page.evaluate(() => document.readyState);
+            } catch {
+              // Page is gone, need to reload
+              await page.goto(`${serverUrl}/test.html`, {
+                waitUntil: "networkidle",
+              });
+              await page.waitForTimeout(200);
+
+              // Re-inject everything
+              await page.waitForFunction(
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                () => typeof (window as any).loadSolc === "function",
+                { timeout: 10000 }
+              );
+
+              await page.evaluate(
+                (testCode) => {
+                  // eslint-disable-next-line no-eval
+                  eval(testCode);
+                },
+                createBrowserTestRunner(testName, testCase)
+              );
+            }
+
+            // Retry the test
+            result = await page.evaluate(
+              async ({ testName, soljsonContent }) => {
+                // @ts-expect-error dynamically created function
+                return await window[testName](soljsonContent);
+              },
+              { testName, soljsonContent: soljson }
+            );
+          } else {
+            throw error;
+          }
+        }
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const typedResult = result as any;
@@ -141,9 +233,9 @@ describe("Browser Integration Tests", () => {
     );
 
     // Check if soljson file exists
-    let soljsonText: string;
+    let soljson: string;
     try {
-      soljsonText = readFileSync(soljsonPath, "utf-8");
+      soljson = readFileSync(soljsonPath, "utf-8");
     } catch {
       throw new Error(
         `Solidity compiler v${errorTestCase.version} not found at ${soljsonPath}.\n` +
@@ -151,7 +243,12 @@ describe("Browser Integration Tests", () => {
       );
     }
 
-    await page.goto(`${serverUrl}/test.html`);
+    await page.goto(`${serverUrl}/test.html`, {
+      waitUntil: "networkidle",
+    });
+
+    // Add a small delay to ensure page is fully stable
+    await page.waitForTimeout(100);
 
     await page.waitForFunction(
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -175,7 +272,7 @@ describe("Browser Integration Tests", () => {
         // @ts-expect-error dynamically created function
         return await window[testName](soljsonContent);
       },
-      { testName, soljsonContent: soljsonText }
+      { testName, soljsonContent: soljson }
     );
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

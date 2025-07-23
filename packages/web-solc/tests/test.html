@@ -13,7 +13,7 @@
 
       // Make functions available globally for testing
       window.loadSolc = loadSolc;
-      window.runTest = async (soljsonText) => {
+      window.runTest = async (soljson) => {
         try {
           const statusEl = document.getElementById("status");
           const outputEl = document.getElementById("output");
@@ -21,7 +21,7 @@
           statusEl.textContent = "Initializing compiler...";
 
           // Load the compiler
-          const solc = loadSolc(soljsonText);
+          const solc = loadSolc(soljson);
 
           // Create test input
           const input = {

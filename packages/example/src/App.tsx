@@ -4,16 +4,20 @@ import "./App.css";
 import { WebSolcProvider, useWebSolc } from "@web-solc/react";
 
 export function Example() {
-  const solc = useWebSolc("^0.8.25");
+  const compiler = useWebSolc({ version: "^0.8.25" });
   const [output, setOutput] = useState("");
 
-  if (!solc) {
+  if (compiler.loading) {
     return <>Loading...</>;
+  }
+
+  if (compiler.error) {
+    return <>Error: {compiler.error.message}</>;
   }
 
   const compile = async () => {
     try {
-      const result = await solc.compile({
+      const result = await compiler.compile({
         language: "Solidity",
         sources: {
           "test.sol": {
@@ -41,6 +45,20 @@ export function Example() {
       <pre>{output}</pre>
     </div>
   );
+}
+
+// Example showing preloaded compiler
+export function ExampleWithPreloadedCompiler() {
+  // Imagine this is fetched from somewhere
+  const soljson = "..."; // Would be actual soljson content
+
+  const compiler = useWebSolc({ soljson });
+
+  if (compiler.loading) return <>Loading preloaded compiler...</>;
+  if (compiler.error) return <>Error: {compiler.error.message}</>;
+
+  // Use compiler.compile as before
+  return <div>Preloaded compiler ready!</div>;
 }
 
 export default function App() {

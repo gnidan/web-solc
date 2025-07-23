@@ -22,9 +22,9 @@ describe("Node.js Integration Tests", () => {
       );
 
       // Check if soljson file exists
-      let soljsonText: string;
+      let soljson: string;
       try {
-        soljsonText = readFileSync(soljsonPath, "utf-8");
+        soljson = readFileSync(soljsonPath, "utf-8");
       } catch {
         throw new Error(
           `Solidity compiler v${testCase.version} not found at ${soljsonPath}.\n` +
@@ -36,7 +36,7 @@ describe("Node.js Integration Tests", () => {
       const { loadSolc } = await import(
         "../packages/web-solc/dist/src/node.js"
       );
-      const solc = await loadSolc(soljsonText);
+      const solc = await loadSolc(soljson);
 
       try {
         // Create compile input from test case
@@ -69,9 +69,9 @@ describe("Node.js Integration Tests", () => {
     );
 
     // Check if soljson file exists
-    let soljsonText: string;
+    let soljson: string;
     try {
-      soljsonText = readFileSync(soljsonPath, "utf-8");
+      soljson = readFileSync(soljsonPath, "utf-8");
     } catch {
       throw new Error(
         `Solidity compiler v${errorTestCase.version} not found at ${soljsonPath}.\n` +
@@ -80,7 +80,7 @@ describe("Node.js Integration Tests", () => {
     }
 
     const { loadSolc } = await import("../packages/web-solc/dist/src/node.js");
-    const solc = await loadSolc(soljsonText);
+    const solc = await loadSolc(soljson);
 
     try {
       const input = createCompileInput(errorTestCase);
