@@ -1,7 +1,7 @@
 {
   "name": "example",
   "private": true,
-  "version": "0.0.10",
+  "version": "0.0.11",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,10 +11,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@web-solc/react": "^0.1.1",
+    "@web-solc/react": "^0.2.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "web-solc": "^0.5.2"
+    "web-solc": "^0.6.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
