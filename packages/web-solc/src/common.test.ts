@@ -32,10 +32,10 @@ describe("common", () => {
 
       expect(global.fetch).toHaveBeenCalledTimes(2);
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://binaries.soliditylang.org/bin/list.json"
+        "https://binaries.soliditylang.org/wasm/list.json"
       );
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://binaries.soliditylang.org/bin/soljson-v0.8.21.js"
+        "https://binaries.soliditylang.org/wasm/soljson-v0.8.21.js"
       );
       expect(result).toBe(mockSoljson);
     });
@@ -61,9 +61,11 @@ describe("common", () => {
         repository: { baseUrl: customBaseUrl },
       });
 
-      expect(global.fetch).toHaveBeenCalledWith(`${customBaseUrl}/list.json`);
       expect(global.fetch).toHaveBeenCalledWith(
-        `${customBaseUrl}/soljson-v0.8.19.js`
+        `${customBaseUrl}/wasm/list.json`
+      );
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${customBaseUrl}/wasm/soljson-v0.8.19.js`
       );
     });
 
@@ -106,7 +108,7 @@ describe("common", () => {
       await fetchSolc(">=0.8.18 <0.8.20");
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://binaries.soliditylang.org/bin/soljson-v0.8.19.js"
+        "https://binaries.soliditylang.org/wasm/soljson-v0.8.19.js"
       );
     });
 
@@ -142,10 +144,10 @@ describe("common", () => {
       await fetchSolc("0.8.19", options);
 
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://example.com/list.json"
+        "https://example.com/wasm/list.json"
       );
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://example.com/soljson-v0.8.19.js"
+        "https://example.com/wasm/soljson-v0.8.19.js"
       );
     });
   });
@@ -169,7 +171,7 @@ describe("common", () => {
 
       expect(global.fetch).toHaveBeenCalledTimes(1);
       expect(global.fetch).toHaveBeenCalledWith(
-        "https://binaries.soliditylang.org/bin/list.json"
+        "https://binaries.soliditylang.org/wasm/list.json"
       );
       expect(result).toEqual({
         version: "0.8.21",
@@ -249,7 +251,9 @@ describe("common", () => {
         repository: { baseUrl: customBaseUrl },
       });
 
-      expect(global.fetch).toHaveBeenCalledWith(`${customBaseUrl}/list.json`);
+      expect(global.fetch).toHaveBeenCalledWith(
+        `${customBaseUrl}/wasm/list.json`
+      );
     });
 
     it("should throw error when no compatible version found", async () => {

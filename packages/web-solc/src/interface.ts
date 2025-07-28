@@ -2,11 +2,13 @@ export interface RepositoryOptions {
   baseUrl?: string;
 }
 
-export const defaultBaseUrl = "https://binaries.soliditylang.org/bin";
+export const defaultBaseUrl = "https://binaries.soliditylang.org";
+export const defaultBuild: "wasm" | "emscripten" = "wasm";
 
 // Options for fetching/downloading Solidity compiler
 export interface FetchOptions {
   repository?: RepositoryOptions;
+  build?: "wasm" | "emscripten";
 }
 
 // Constants for the different compiler interfaces

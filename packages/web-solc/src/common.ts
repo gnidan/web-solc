@@ -2,16 +2,15 @@ import semver from "semver";
 
 import {
   defaultBaseUrl,
+  defaultBuild,
   type FetchOptions,
-  type RepositoryOptions,
 } from "./interface.js";
 
 export async function resolveSolc(
   versionRange: string,
   options: FetchOptions = {}
 ): Promise<{ version: string; path: string }> {
-  const { repository = {} } = options;
-  const { builds } = await fetchBinList(repository);
+  const { builds } = await fetchBinList(options);
   const compatibleBuilds = builds.filter(({ longVersion }) =>
     semver.satisfies(longVersion, versionRange)
   );
@@ -37,9 +36,8 @@ export async function fetchSolc(
   versionRange: string,
   options: FetchOptions = {}
 ): Promise<string> {
-  const { repository = {} } = options;
   const { path } = await resolveSolc(versionRange, options);
-  const soljson = await fetchSoljson(path, repository);
+  const soljson = await fetchSoljson(path, options);
 
   return soljson;
 }
@@ -52,19 +50,28 @@ interface BinList {
   }[];
 }
 
-async function fetchBinList({
-  baseUrl = defaultBaseUrl,
-}: RepositoryOptions = {}): Promise<BinList> {
-  const response = await fetch(`${baseUrl}/list.json`);
+function buildsUrl(options: FetchOptions = {}): string {
+  const {
+    build = defaultBuild,
+    repository: { baseUrl = defaultBaseUrl } = {},
+  } = options;
+
+  const path = build === "wasm" ? "wasm" : "bin";
+
+  return `${baseUrl}/${path}`;
+}
+
+async function fetchBinList(options: FetchOptions = {}): Promise<BinList> {
+  const response = await fetch(`${buildsUrl(options)}/list.json`);
 
   return response.json();
 }
 
 async function fetchSoljson(
   path: string,
-  { baseUrl = defaultBaseUrl }: RepositoryOptions = {}
+  options: FetchOptions = {}
 ): Promise<string> {
-  const response = await fetch(`${baseUrl}/${path}`);
+  const response = await fetch(`${buildsUrl(options)}/${path}`);
 
   return response.text();
 }
