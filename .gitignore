@@ -4,13 +4,32 @@ packages/web-solc/vendor/
 test-results.json
 coverage/
 
-# Keep README and representative versions for CI
+# Keep README and directory structure
 !packages/web-solc/vendor/README.md
-!packages/web-solc/vendor/soljson-v0.4.26.js
-!packages/web-solc/vendor/soljson-v0.5.3.js
-!packages/web-solc/vendor/soljson-v0.5.6.js
-!packages/web-solc/vendor/soljson-v0.6.12.js
-!packages/web-solc/vendor/soljson-v0.7.6.js
-!packages/web-solc/vendor/soljson-v0.8.0.js
-!packages/web-solc/vendor/soljson-v0.8.19.js
-!packages/web-solc/vendor/soljson-v0.8.30.js
+!packages/web-solc/vendor/wasm/
+!packages/web-solc/vendor/emscripten/
+
+# Ignore all soljson files in subdirectories
+packages/web-solc/vendor/wasm/*.js
+packages/web-solc/vendor/emscripten/*.js
+
+# Keep representative versions for CI
+# WASM versions (used by default in tests)
+!packages/web-solc/vendor/wasm/soljson-v0.4.26.js
+!packages/web-solc/vendor/wasm/soljson-v0.5.3.js
+!packages/web-solc/vendor/wasm/soljson-v0.5.6.js
+!packages/web-solc/vendor/wasm/soljson-v0.6.12.js
+!packages/web-solc/vendor/wasm/soljson-v0.7.6.js
+!packages/web-solc/vendor/wasm/soljson-v0.8.0.js
+!packages/web-solc/vendor/wasm/soljson-v0.8.19.js
+!packages/web-solc/vendor/wasm/soljson-v0.8.30.js
+
+# Emscripten versions (for compatibility testing)
+!packages/web-solc/vendor/emscripten/soljson-v0.4.26.js
+!packages/web-solc/vendor/emscripten/soljson-v0.5.3.js
+!packages/web-solc/vendor/emscripten/soljson-v0.5.6.js
+!packages/web-solc/vendor/emscripten/soljson-v0.6.12.js
+!packages/web-solc/vendor/emscripten/soljson-v0.7.6.js
+!packages/web-solc/vendor/emscripten/soljson-v0.8.0.js
+!packages/web-solc/vendor/emscripten/soljson-v0.8.19.js
+!packages/web-solc/vendor/emscripten/soljson-v0.8.30.js

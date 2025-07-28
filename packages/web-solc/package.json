@@ -24,7 +24,7 @@
     "test:coverage": "vitest run --coverage",
     "test:integration": "vitest run --config vitest.config.integration.ts",
     "test:integration:node": "vitest run --config vitest.config.node-integration.ts",
-    "test:compat:download": "./bin/download-soljson-versions.sh",
+    "test:compat:download": "tsx ./bin/download-soljson-versions.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },

@@ -21,7 +21,7 @@ describe("Node.js Integration Tests", () => {
       async () => {
         const soljsonPath = resolve(
           __dirname,
-          `../vendor/soljson-v${testCase.version}.js`
+          `../vendor/wasm/soljson-v${testCase.version}.js`
         );
 
         // Check if soljson file exists
@@ -67,7 +67,7 @@ describe("Node.js Integration Tests", () => {
   it("should handle compilation errors gracefully", async () => {
     const soljsonPath = resolve(
       __dirname,
-      `../vendor/soljson-v${errorTestCase.version}.js`
+      `../vendor/wasm/soljson-v${errorTestCase.version}.js`
     );
 
     // Check if soljson file exists

@@ -72,84 +72,89 @@ describe("Browser Integration Tests", () => {
 
   // Generate tests from data
   for (const testCase of testCases) {
-    it(`should compile ${testCase.description} (v${testCase.version})`, async () => {
-      try {
-        const soljsonPath = resolve(
-          __dirname,
-          `../packages/web-solc/vendor/soljson-v${testCase.version}.js`
-        );
-
-        // Check if soljson file exists
-        let soljson: string;
+    // Test both wasm and emscripten builds
+    for (const build of ["wasm", "emscripten"] as const) {
+      it(`should compile ${testCase.description} (v${testCase.version}, ${build})`, async () => {
         try {
-          soljson = readFileSync(soljsonPath, "utf-8");
-        } catch {
-          throw new Error(
-            `Solidity compiler v${testCase.version} not found at ${soljsonPath}.\n` +
-              `Please run: cd packages/web-solc && yarn test:compat:download`
+          const soljsonPath = resolve(
+            __dirname,
+            `../packages/web-solc/vendor/${build}/soljson-v${testCase.version}.js`
           );
-        }
 
-        // Navigate to the test page
-        await page.goto(`${serverUrl}/test.html`);
+          // Check if soljson file exists
+          let soljson: string;
+          try {
+            soljson = readFileSync(soljsonPath, "utf-8");
+          } catch {
+            // Skip test if this version doesn't exist for this build
+            throw new Error(
+              `Version ${testCase.version} not available for ${build} build - file not found at ${soljsonPath}`
+            );
+          }
 
-        // Wait for loadSolc to be available
-        await page.waitForFunction(
+          // Navigate to the test page
+          await page.goto(`${serverUrl}/test.html`);
+
+          // Wait for loadSolc to be available
+          await page.waitForFunction(
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            () => typeof (window as any).loadSolc === "function",
+            { timeout: 10000 }
+          );
+
+          // Create unique test name
+          const testName = `test_v${testCase.version.replace(/\./g, "_")}_${testCase.contract.contractName}`;
+
+          // Inject the test runner
+          await page.evaluate(
+            (testCode) => {
+              // eslint-disable-next-line no-eval
+              eval(testCode);
+            },
+            createBrowserTestRunner(testName, testCase)
+          );
+
+          // Run the test
+          const result = await page.evaluate(
+            async ({ testName, soljsonContent }) => {
+              // @ts-expect-error dynamically created function
+              return await window[testName](soljsonContent);
+            },
+            { testName, soljsonContent: soljson }
+          );
+
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          () => typeof (window as any).loadSolc === "function",
-          { timeout: 10000 }
-        );
+          const typedResult = result as any;
+          if (!typedResult.success) {
+            throw new Error(`Test failed: ${typedResult.error}`);
+          }
 
-        // Create unique test name
-        const testName = `test_v${testCase.version.replace(/\./g, "_")}_${testCase.contract.contractName}`;
-
-        // Inject the test runner
-        await page.evaluate(
-          (testCode) => {
-            // eslint-disable-next-line no-eval
-            eval(testCode);
-          },
-          createBrowserTestRunner(testName, testCase)
-        );
-
-        // Run the test
-        const result = await page.evaluate(
-          async ({ testName, soljsonContent }) => {
-            // @ts-expect-error dynamically created function
-            return await window[testName](soljsonContent);
-          },
-          { testName, soljsonContent: soljson }
-        );
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const typedResult = result as any;
-        if (!typedResult.success) {
-          throw new Error(`Test failed: ${typedResult.error}`);
+          // Run assertions on the contract
+          runAssertions(typedResult.contract, testCase.assertions);
+        } catch (error) {
+          // Expected failures for certain versions
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          if (
+            errorMessage.includes(
+              "RangeError: Maximum call stack size exceeded"
+            )
+          ) {
+            throw new Error(
+              "Browser stack overflow - version too large for browser execution"
+            );
+          }
+          throw error;
         }
-
-        // Run assertions on the contract
-        runAssertions(typedResult.contract, testCase.assertions);
-      } catch (error) {
-        // Expected failures for certain versions
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        if (
-          errorMessage.includes("RangeError: Maximum call stack size exceeded")
-        ) {
-          throw new Error(
-            "Browser stack overflow - version too large for browser execution"
-          );
-        }
-        throw error;
-      }
-    }, 120000);
+      }, 120000);
+    }
   }
 
-  // Error test case
-  it("should handle compilation errors gracefully", async () => {
+  // Error test case - only test with emscripten as it's just for error handling
+  it("should handle compilation errors gracefully (emscripten)", async () => {
     const soljsonPath = resolve(
       __dirname,
-      `../packages/web-solc/vendor/soljson-v${errorTestCase.version}.js`
+      `../packages/web-solc/vendor/emscripten/soljson-v${errorTestCase.version}.js`
     );
 
     // Check if soljson file exists
