@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 
 import { spawn } from "child_process";
-import { writeFileSync } from "fs";
+import { writeFileSync, existsSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 import * as semver from "semver";
@@ -9,23 +9,31 @@ import * as semver from "semver";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(__dirname, "..");
 
-interface VersionResult {
-  version: string;
-  browser: "pass" | "fail" | "skip";
-  node: "pass" | "fail" | "skip";
-  notes?: string;
+type Build = "wasm" | "emscripten";
+type Status = "pass" | "fail" | "skip";
+
+interface BuildResults {
+  wasm: {
+    browser: Status;
+    node: Status;
+  };
+  emscripten: {
+    browser: Status;
+    node: Status;
+  };
 }
 
 interface VersionRange {
   range: string;
-  browser: "pass" | "fail" | "mixed" | "skip";
-  node: "pass" | "fail" | "mixed" | "skip";
+  browserStatus: string;
+  nodeStatus: string;
+  notes: string[];
   versions: string[];
 }
 
-async function runTests(testFile: string): Promise<Map<string, boolean>> {
+async function runTests(testFile: string): Promise<Map<string, Status>> {
   return new Promise((resolve, reject) => {
-    const results = new Map<string, boolean>();
+    const results = new Map<string, Status>();
 
     const proc = spawn(
       "yarn",
@@ -64,16 +72,34 @@ async function runTests(testFile: string): Promise<Map<string, boolean>> {
 
         const testResults = JSON.parse(jsonMatch[0]);
 
-        // Extract results for each version
+        // Extract results for each version and build
         testResults.testResults?.forEach(
           (file: {
-            assertionResults?: Array<{ title?: string; status: string }>;
+            assertionResults?: Array<{
+              title?: string;
+              status: string;
+              failureMessages?: string[];
+            }>;
           }) => {
             file.assertionResults?.forEach((test) => {
-              const versionMatch = test.title?.match(/v([\d.]+)\)$/);
-              if (versionMatch) {
-                const version = versionMatch[1];
-                results.set(version, test.status === "passed");
+              // Match version and build from test title
+              const match = test.title?.match(/v([\d.]+), (wasm|emscripten)\)/);
+              if (match) {
+                const [, version, build] = match;
+                const key = `${version}-${build}`;
+
+                // Check if it's a "file not found" failure
+                const isFileNotFound = test.failureMessages?.some(
+                  (msg) =>
+                    msg.includes("file not found") ||
+                    msg.includes("not available for")
+                );
+
+                if (isFileNotFound) {
+                  results.set(key, "skip");
+                } else {
+                  results.set(key, test.status === "passed" ? "pass" : "fail");
+                }
               }
             });
           }
@@ -87,65 +113,107 @@ async function runTests(testFile: string): Promise<Map<string, boolean>> {
   });
 }
 
-// Compress ranges within a minor version using semver utilities
-function compressMinorVersion(versions: VersionResult[]): VersionRange[] {
+// Group results by version
+function groupByVersion(
+  browserResults: Map<string, Status>,
+  nodeResults: Map<string, Status>
+): Map<string, BuildResults> {
+  const versionMap = new Map<string, BuildResults>();
+
+  // Get all unique versions
+  const allKeys = new Set([...browserResults.keys(), ...nodeResults.keys()]);
+
+  for (const key of allKeys) {
+    const [version, build] = key.split("-") as [string, Build];
+
+    if (!versionMap.has(version)) {
+      versionMap.set(version, {
+        wasm: { browser: "skip", node: "skip" },
+        emscripten: { browser: "skip", node: "skip" },
+      });
+    }
+
+    const versionResults = versionMap.get(version)!;
+    versionResults[build].browser = browserResults.get(key) || "skip";
+    versionResults[build].node = nodeResults.get(key) || "skip";
+  }
+
+  return versionMap;
+}
+
+// Compress ranges within a minor version
+function compressMinorVersion(
+  versions: Array<[string, BuildResults]>
+): VersionRange[] {
   if (versions.length === 0) return [];
 
-  // Sort versions first
-  const sorted = versions.sort((a, b) => semver.compare(a.version, b.version));
+  // Sort versions
+  const sorted = versions.sort(([a], [b]) => semver.compare(a, b));
 
   const ranges: VersionRange[] = [];
   let currentRange: VersionRange | null = null;
 
-  for (const version of sorted) {
+  for (const [version, results] of sorted) {
+    // Determine browser and node status with notes
+    const browserWorks =
+      results.wasm.browser === "pass" || results.emscripten.browser === "pass";
+    const nodeWorks =
+      results.wasm.node === "pass" || results.emscripten.node === "pass";
+
+    const notes: string[] = [];
+
+    // Also check if the WASM file actually exists
+    const wasmPath = resolve(
+      repoRoot,
+      `packages/web-solc/vendor/wasm/soljson-v${version}.js`
+    );
+    const wasmFileExists = existsSync(wasmPath);
+
     if (
-      !currentRange ||
-      currentRange.browser !== version.browser ||
-      currentRange.node !== version.node
+      browserWorks &&
+      results.wasm.browser === "pass" &&
+      results.emscripten.browser !== "pass"
     ) {
-      // Start new range with different status
+      notes.push("Browser requires WebAssembly build");
+    } else if (
+      browserWorks &&
+      results.wasm.browser !== "pass" &&
+      results.emscripten.browser === "pass" &&
+      wasmFileExists
+    ) {
+      notes.push("Only Emscripten build available");
+    }
+
+    if (!wasmFileExists && (browserWorks || nodeWorks)) {
+      notes.push("No WebAssembly build");
+    }
+
+    const browserStatus = browserWorks ? "✅" : "❌";
+    const nodeStatus = nodeWorks ? "✅" : "❌";
+    const noteString = notes.join(", ");
+
+    // Check if we can extend the current range
+    const isSameStatus =
+      currentRange &&
+      currentRange.browserStatus === browserStatus &&
+      currentRange.nodeStatus === nodeStatus &&
+      currentRange.notes.join(", ") === noteString;
+
+    if (!currentRange || !isSameStatus) {
+      // Start new range
       if (currentRange) {
         ranges.push(currentRange);
       }
       currentRange = {
-        range: version.version,
-        browser: version.browser,
-        node: version.node,
-        versions: [version.version],
+        range: version,
+        browserStatus,
+        nodeStatus,
+        notes,
+        versions: [version],
       };
     } else {
-      // Same status, check if consecutive
-      const lastVersion =
-        currentRange.versions[currentRange.versions.length - 1];
-      const diff = semver.diff(lastVersion, version.version);
-
-      // Only extend range if it's the next patch version
-      if (diff === "patch") {
-        const lastParsed = semver.parse(lastVersion)!;
-        const currentParsed = semver.parse(version.version)!;
-
-        if (currentParsed.patch === lastParsed.patch + 1) {
-          currentRange.versions.push(version.version);
-        } else {
-          // Gap in patches, start new range
-          ranges.push(currentRange);
-          currentRange = {
-            range: version.version,
-            browser: version.browser,
-            node: version.node,
-            versions: [version.version],
-          };
-        }
-      } else {
-        // Different minor/major, start new range
-        ranges.push(currentRange);
-        currentRange = {
-          range: version.version,
-          browser: version.browser,
-          node: version.node,
-          versions: [version.version],
-        };
-      }
+      // Extend current range
+      currentRange.versions.push(version);
     }
   }
 
@@ -169,7 +237,7 @@ function createRangeString(versions: string[]): string {
   }
 
   if (versions.length === 2) {
-    return versions.join(", ");
+    return `${versions[0]}, ${versions[1]}`;
   }
 
   // For 3+ consecutive versions, show as range
@@ -179,7 +247,15 @@ function createRangeString(versions: string[]): string {
   // Check if all versions are truly consecutive
   let allConsecutive = true;
   for (let i = 0; i < versions.length - 1; i++) {
-    if (semver.diff(versions[i], versions[i + 1]) !== "patch") {
+    const current = semver.parse(versions[i])!;
+    const next = semver.parse(versions[i + 1])!;
+
+    if (current.major !== next.major || current.minor !== next.minor) {
+      allConsecutive = false;
+      break;
+    }
+
+    if (next.patch !== current.patch + 1) {
       allConsecutive = false;
       break;
     }
@@ -203,57 +279,47 @@ async function generateReport() {
   console.log("Running Node.js tests...");
   const nodeResults = await runTests("compat/node.test.ts");
 
-  // Get all tested versions
-  const allVersions = new Set([
-    ...browserResults.keys(),
-    ...nodeResults.keys(),
-  ]);
+  // Group results by version
+  const versionResults = groupByVersion(browserResults, nodeResults);
 
-  // Compile results
-  const results: VersionResult[] = [];
-  for (const version of allVersions) {
-    const browserPass = browserResults.get(version);
-    const nodePass = nodeResults.get(version);
-
-    results.push({
-      version,
-      browser:
-        browserPass === undefined ? "skip" : browserPass ? "pass" : "fail",
-      node: nodePass === undefined ? "skip" : nodePass ? "pass" : "fail",
-    });
-  }
-
-  // Sort all results using semver
-  results.sort((a, b) => semver.compare(a.version, b.version));
-
-  // Group by minor version
-  const byMinor = new Map<string, VersionResult[]>();
-  results.forEach((result) => {
-    const parsed = semver.parse(result.version);
-    if (!parsed) return;
-
-    const minorVersion = `${parsed.major}.${parsed.minor}`;
-    if (!byMinor.has(minorVersion)) {
-      byMinor.set(minorVersion, []);
-    }
-    byMinor.get(minorVersion)!.push(result);
-  });
+  // Sort all versions
+  const sortedVersions = Array.from(versionResults.entries()).sort(([a], [b]) =>
+    semver.compare(a, b)
+  );
 
   // Calculate stats
   const stats = {
-    total: results.length,
-    browserPass: results.filter((r) => r.browser === "pass").length,
-    nodePass: results.filter((r) => r.node === "pass").length,
-    bothPass: results.filter((r) => r.browser === "pass" && r.node === "pass")
-      .length,
+    total: sortedVersions.length,
   };
+
+  // Find version boundaries
+  const firstWasmVersion =
+    sortedVersions.find(
+      ([, r]) => r.wasm.browser !== "skip" || r.wasm.node !== "skip"
+    )?.[0] || "unknown";
+
+  // Find the last version that works but has no WASM
+  let lastNoWasmVersion: string | undefined;
+  for (let i = sortedVersions.length - 1; i >= 0; i--) {
+    const [version, results] = sortedVersions[i];
+    const hasWasm =
+      results.wasm.browser !== "skip" || results.wasm.node !== "skip";
+    const works =
+      results.emscripten.browser === "pass" ||
+      results.emscripten.node === "pass";
+
+    if (!hasWasm && works) {
+      lastNoWasmVersion = version;
+      break;
+    }
+  }
 
   // Generate markdown report
   let markdown = `# Solidity Version Compatibility
 
 This document details the compatibility of web-solc with different Solidity compiler versions based on automated testing.
 
-Generated: ${new Date().toISOString()}  
+Generated: ${new Date().toISOString()}
 **Total versions tested**: ${stats.total}
 
 ## Quick Reference
@@ -262,39 +328,41 @@ Generated: ${new Date().toISOString()}
 
 `;
 
-  // Generate quick reference with better formatting
-  const fullySupported = results.filter(
-    (r) => r.browser === "pass" && r.node === "pass"
+  // Extract versions that work in both browser and Node.js (with either build)
+  const fullySupported = sortedVersions.filter(
+    ([, r]) =>
+      (r.wasm.browser === "pass" || r.emscripten.browser === "pass") &&
+      (r.wasm.node === "pass" || r.emscripten.node === "pass")
   );
-  const nodeOnly = results.filter(
-    (r) => r.browser === "fail" && r.node === "pass"
+  const nodeOnly = sortedVersions.filter(
+    ([, r]) =>
+      r.wasm.browser !== "pass" &&
+      r.emscripten.browser !== "pass" &&
+      (r.wasm.node === "pass" || r.emscripten.node === "pass")
   );
-  const notSupported = results.filter(
-    (r) => r.browser === "fail" && r.node === "fail"
+  const notSupported = sortedVersions.filter(
+    ([, r]) =>
+      r.wasm.browser !== "pass" &&
+      r.emscripten.browser !== "pass" &&
+      r.wasm.node !== "pass" &&
+      r.emscripten.node !== "pass"
   );
 
-  // Extract major version ranges for cleaner display
-  const fullySupportedRanges = extractMajorRanges(
-    fullySupported.map((r) => r.version)
-  );
-  const nodeOnlyRanges = extractMajorRanges(nodeOnly.map((r) => r.version));
-  const notSupportedRanges = extractMajorRanges(
-    notSupported.map((r) => r.version)
-  );
-
-  markdown += fullySupportedRanges.join(", ") + "\n";
+  markdown +=
+    extractMajorRanges(fullySupported.map(([v]) => v)).join(", ") + "\n";
 
   markdown += `
 ### Node.js Only
 
 `;
-  markdown += nodeOnlyRanges.join(", ") + "\n";
+  markdown += extractMajorRanges(nodeOnly.map(([v]) => v)).join(", ") + "\n";
 
   markdown += `
 ### Not Supported
 
 `;
-  markdown += notSupportedRanges.join(", ") + "\n";
+  markdown +=
+    extractMajorRanges(notSupported.map(([v]) => v)).join(", ") + "\n";
 
   markdown += `
 ## Detailed Results
@@ -303,9 +371,21 @@ Generated: ${new Date().toISOString()}
 |--------------|---------|---------|-------|
 `;
 
+  // Group by minor version
+  const byMinor = new Map<string, Array<[string, BuildResults]>>();
+  for (const [version, results] of sortedVersions) {
+    const parsed = semver.parse(version);
+    if (!parsed) continue;
+
+    const minorVersion = `${parsed.major}.${parsed.minor}`;
+    if (!byMinor.has(minorVersion)) {
+      byMinor.set(minorVersion, []);
+    }
+    byMinor.get(minorVersion)!.push([version, results]);
+  }
+
   // Add compressed results to table (newest first)
   const sortedMinors = Array.from(byMinor.keys()).sort((a, b) => {
-    // Parse minor versions and compare
     const [aMajor, aMinor] = a.split(".").map(Number);
     const [bMajor, bMinor] = b.split(".").map(Number);
 
@@ -321,15 +401,8 @@ Generated: ${new Date().toISOString()}
 
     // Reverse ranges to show newest patches first within each minor version
     ranges.reverse().forEach((range) => {
-      const browserIcon =
-        range.browser === "pass"
-          ? "✅"
-          : range.browser === "fail"
-            ? "❌"
-            : "⏭️";
-      const nodeIcon =
-        range.node === "pass" ? "✅" : range.node === "fail" ? "❌" : "⏭️";
-      markdown += `| ${range.range} | ${browserIcon} | ${nodeIcon} |  |\n`;
+      const noteStr = range.notes.length > 0 ? range.notes.join(", ") : "";
+      markdown += `| ${range.range} | ${range.browserStatus} | ${range.nodeStatus} | ${noteStr} |\n`;
     });
   }
 
@@ -338,13 +411,20 @@ Generated: ${new Date().toISOString()}
 
 - ✅ Pass - Version is fully supported
 - ❌ Fail - Version fails to compile or has errors
-- ⏭️ Skip - Version was skipped in testing
+- **Browser requires WebAssembly build** - Emscripten build causes stack overflow in browsers
+
+## Build Information
+
+- **WebAssembly builds**: Available from Solidity ${firstWasmVersion}+${lastNoWasmVersion ? `. Versions through ${lastNoWasmVersion} only have Emscripten builds.` : ""}
+- **Emscripten builds**: Available for all versions but may cause stack overflow in browsers for older versions (0.4.x and 0.5.x)
 
 ## Known Issues
 
 ### Browser Stack Overflow
 
-Many 0.4.x and 0.5.x versions fail in browser environments due to stack overflow errors when loading the large compiler JavaScript files. These versions work correctly in Node.js environments.
+Many 0.4.x and 0.5.x versions fail in browser environments when using Emscripten builds due to stack overflow errors. These versions work correctly:
+- In Node.js with Emscripten builds
+- In browsers with WASM builds (when available)
 
 ### Pre-0.4.11 Versions
 
@@ -366,38 +446,18 @@ yarn test:compat:report    # Generate this report
   writeFileSync(reportPath, markdown);
   console.log(`Report written to: ${reportPath}`);
 
-  // Find earliest supported versions
-  const browserSupported = results
-    .filter((r) => r.browser === "pass")
-    .sort((a, b) => semver.compare(a.version, b.version));
-  const nodeSupported = results
-    .filter((r) => r.node === "pass")
-    .sort((a, b) => semver.compare(a.version, b.version));
+  // Find earliest supported versions (preferring WASM for badges)
+  const browserFirst =
+    sortedVersions.find(([, r]) => r.wasm.browser === "pass")?.[0] || "none";
+  const nodeFirst =
+    sortedVersions.find(([, r]) => r.wasm.node === "pass")?.[0] || "none";
 
-  const earliestBrowser =
-    browserSupported.length > 0 ? browserSupported[0].version : "none";
-  const earliestNode =
-    nodeSupported.length > 0 ? nodeSupported[0].version : "none";
-
-  // Generate main compatibility badge (showing both)
-  const badgeData = {
-    schemaVersion: 1,
-    label: "solidity",
-    message: `browser: ${earliestBrowser}+ | node: ${earliestNode}+`,
-    color: "brightgreen",
-  };
-
-  const badgePath = resolve(repoRoot, "compatibility-badge.json");
-  writeFileSync(badgePath, JSON.stringify(badgeData, null, 2));
-  console.log(`Badge data written to: ${badgePath}`);
-
-  // Generate browser-specific badge
+  // Generate browser badge
   const browserBadgeData = {
     schemaVersion: 1,
-    label: "browser support",
-    message:
-      earliestBrowser === "none" ? "not supported" : `${earliestBrowser}+`,
-    color: earliestBrowser === "none" ? "red" : "brightgreen",
+    label: "solc support (browser)",
+    message: browserFirst === "none" ? "not supported" : `${browserFirst}+`,
+    color: browserFirst === "none" ? "red" : "brightgreen",
   };
 
   const browserBadgePath = resolve(
@@ -407,12 +467,12 @@ yarn test:compat:report    # Generate this report
   writeFileSync(browserBadgePath, JSON.stringify(browserBadgeData, null, 2));
   console.log(`Browser badge data written to: ${browserBadgePath}`);
 
-  // Generate node-specific badge
+  // Generate Node.js badge
   const nodeBadgeData = {
     schemaVersion: 1,
-    label: "node.js support",
-    message: earliestNode === "none" ? "not supported" : `${earliestNode}+`,
-    color: earliestNode === "none" ? "red" : "brightgreen",
+    label: "solc support (Node.js)",
+    message: nodeFirst === "none" ? "not supported" : `${nodeFirst}+`,
+    color: nodeFirst === "none" ? "red" : "brightgreen",
   };
 
   const nodeBadgePath = resolve(repoRoot, "node-compatibility-badge.json");

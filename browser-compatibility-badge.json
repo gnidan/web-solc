@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "label": "browser support",
-  "message": "0.4.26+",
+  "label": "solc support (browser)",
+  "message": "0.4.16+",
   "color": "brightgreen"
 }
