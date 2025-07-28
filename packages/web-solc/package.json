@@ -1,6 +1,6 @@
 {
   "name": "web-solc",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "Browser compatible wrapper around solc in a web worker",
   "type": "module",
   "main": "dist/src/node.js",

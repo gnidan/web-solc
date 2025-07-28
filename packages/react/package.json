@@ -1,6 +1,6 @@
 {
   "name": "@web-solc/react",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "In-browser Solidity compilation for React projects",
   "type": "module",
   "main": "./dist/src/index.jsx",
@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "react": "^18.3.1",
-    "web-solc": "^0.6.0"
+    "web-solc": "^0.7.0"
   },
   "publishConfig": {
     "access": "public"
