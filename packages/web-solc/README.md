@@ -118,6 +118,7 @@ Downloads the compiler JavaScript from binaries.soliditylang.org.
 
 - `versionRange` — Semantic version range for selecting compiler
 - `options.repository.baseUrl` — Alternative CDN URL (optional)
+- `options.build` — Compiler build type: `"wasm"` (default) or `"emscripten"` (optional)
 
 **Returns:** Compiler JavaScript as a string
 
@@ -127,6 +128,9 @@ Downloads the compiler JavaScript from binaries.soliditylang.org.
 const soljson = await fetchSolc("0.8.26");
 // Store it, cache it, or load it immediately
 localStorage.setItem("solc-0.8.26", soljson);
+
+// Fetch emscripten build (for compatibility with older environments)
+const emscriptenSoljson = await fetchSolc("0.8.26", { build: "emscripten" });
 ```
 
 </details>
@@ -147,6 +151,7 @@ Resolves a semantic version range to the exact compiler version and path, withou
 
 - `versionRange` — Semantic version range for selecting compiler
 - `options.repository.baseUrl` — Alternative CDN URL (optional)
+- `options.build` — Compiler build type: `"wasm"` (default) or `"emscripten"` (optional)
 
 **Returns:** Object with exact `version` and `path`
 
@@ -393,6 +398,7 @@ interface FetchOptions {
   repository?: {
     baseUrl?: string;
   };
+  build?: "wasm" | "emscripten";
 }
 
 // Options for loadSolc
@@ -413,7 +419,23 @@ interface FetchAndLoadOptions {
 
 ## Solidity version support
 
-- **Browser**: 0.4.26, 0.5.3+ (with some gaps due to browser limitations)
+- **Browser**: 0.4.16+ (requires WebAssembly builds for some older versions)
 - **Node.js**: 0.4.16+
 
 See the [detailed compatibility report](../../COMPATIBILITY.md) for specific version support.
+
+### Build types
+
+web-solc supports two build types:
+
+1. **WebAssembly (WASM)** - Default, recommended for browsers
+   - Available from Solidity 0.3.6+
+   - More efficient and stable in browser environments
+   - Avoids stack overflow issues with older compiler versions
+
+2. **Emscripten** - Legacy JavaScript builds
+   - Available for all versions
+   - May cause stack overflow in browsers for some 0.4.x and 0.5.x versions
+   - Works reliably in Node.js
+
+The library defaults to WASM builds when using `fetchSolc`. Use the `build` option to explicitly request Emscripten builds if needed for compatibility.
